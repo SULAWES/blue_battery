@@ -1,0 +1,1 @@
+D:\Dev\blue_battery\blue_battery\blue_battery.csproj;arm64

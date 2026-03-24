@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "blue_battery (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "blue_battery (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
