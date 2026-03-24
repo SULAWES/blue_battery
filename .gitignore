@@ -1,1 +1,17 @@
 dev_docs/
+
+# Local tool and IDE state
+.dotnet_home/
+.vs/
+*.user
+*.rsuser
+*.suo
+
+# Build outputs
+bin/
+obj/
+
+# WinUI / MSIX packaging artifacts
+AppPackages/
+BundleArtifacts/
+TestResults/
