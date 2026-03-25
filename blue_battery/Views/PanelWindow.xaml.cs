@@ -1,5 +1,7 @@
 using System;
 using BlueBattery.Interop;
+using BlueBattery.Models;
+using BlueBattery.ViewModels;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -9,8 +11,8 @@ namespace BlueBattery;
 
 public sealed partial class PanelWindow : Window
 {
-    private const int PanelWidth = 360;
-    private const int PanelHeight = 220;
+    private const int PanelWidth = 420;
+    private const int PanelHeight = 520;
     private const int PanelMargin = 12;
     private const int EdgeTolerance = 32;
     private readonly IntPtr _hWnd;
@@ -19,6 +21,7 @@ public sealed partial class PanelWindow : Window
 
     public PanelWindow()
     {
+        ViewModel = new PanelViewModel();
         InitializeComponent();
         _hWnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         WindowId windowId = Win32Interop.GetWindowIdFromWindow(_hWnd);
@@ -35,6 +38,8 @@ public sealed partial class PanelWindow : Window
     public bool IsVisible { get; private set; }
 
     public bool IsClosed { get; private set; }
+
+    public PanelViewModel ViewModel { get; }
 
     public IntPtr WindowHandle => _hWnd;
 
@@ -89,9 +94,14 @@ public sealed partial class PanelWindow : Window
         ShowAtPosition(displayArea, x, y, preferBelow: false);
     }
 
-    public void UpdatePlaceholderStatus(string status)
+    public void UpdateStatusMessage(string status)
     {
-        ActionStatusTextBlock.Text = status;
+        ViewModel.UpdateStatusMessage(status);
+    }
+
+    public void SetDevices(System.Collections.Generic.IEnumerable<DeviceBatteryInfo> devices)
+    {
+        ViewModel.SetDevices(devices);
     }
 
     private void ShowAtPosition(DisplayArea displayArea, int proposedX, int proposedY, bool preferBelow)

@@ -46,6 +46,7 @@
   </Applications>
 
   <Capabilities>
+    <DeviceCapability Name="bluetooth" />
     <rescap:Capability Name="runFullTrust" />
   </Capabilities>
 </Package>
