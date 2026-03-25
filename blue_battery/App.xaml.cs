@@ -25,6 +25,7 @@ public partial class App : Application
     private bool _pendingRefreshRequested;
     private bool _watcherStarted;
     private CancellationTokenSource? _autoRefreshDebounceCts;
+    private DateTimeOffset? _lastSuccessfulRefreshUtc;
 
     public App()
     {
@@ -192,17 +193,33 @@ public partial class App : Application
         {
             BluetoothRefreshResult result = await _bluetoothBatteryDeviceService.GetConnectedDevicesAsync();
             _panelWindow?.SetDevices(result.Devices);
+            _panelWindow?.UpdateEmptyState(BuildEmptyStateTitle(result), BuildEmptyStateDescription(result));
             _panelWindow?.UpdateStatusMessage(BuildStatusMessage(result));
             _trayIconService?.UpdateTooltip(BuildTooltip(result));
             await _bluetoothBatteryTelemetryService.UpdateTrackedDevicesAsync(result.Devices.Select(device => device.DeviceId));
+            _lastSuccessfulRefreshUtc = DateTimeOffset.UtcNow;
+            _panelWindow?.UpdateLastRefresh(_lastSuccessfulRefreshUtc);
             _hasLoadedDeviceSnapshot = true;
             EnsureWatcherStarted();
         }
         catch (Exception ex)
         {
             string timestamp = DateTime.Now.ToString("HH:mm:ss");
-            _panelWindow?.SetDevices(Array.Empty<BlueBattery.Models.DeviceBatteryInfo>());
-            _panelWindow?.UpdateStatusMessage($"刷新失败。{timestamp}。{ex.Message}");
+            if (_panelWindow?.HasDevices == true)
+            {
+                _panelWindow.MarkDevicesAsStale();
+                _panelWindow.UpdateStatusMessage($"刷新失败，当前显示上次成功读取的缓存值。{timestamp}。{ex.Message}");
+            }
+            else
+            {
+                _panelWindow?.SetDevices(Array.Empty<BlueBattery.Models.DeviceBatteryInfo>());
+                _panelWindow?.UpdateEmptyState(
+                    "刷新失败",
+                    "当前未能读取蓝牙设备电量。请确认设备仍已连接，并稍后再次手动刷新。");
+                _panelWindow?.UpdateStatusMessage($"刷新失败。{timestamp}。{ex.Message}");
+            }
+
+            _panelWindow?.UpdateLastRefresh(_lastSuccessfulRefreshUtc);
             _trayIconService?.UpdateTooltip($"{DefaultTooltip} · 刷新失败");
         }
         finally
@@ -250,6 +267,26 @@ public partial class App : Application
             .Min();
 
         return $"{DefaultTooltip} · {result.Devices.Count} 台设备 · 最低 {lowestBattery}%";
+    }
+
+    private static string BuildEmptyStateTitle(BluetoothRefreshResult result)
+    {
+        if (result.ConnectedLeDeviceCount == 0)
+        {
+            return "没有已连接蓝牙设备";
+        }
+
+        return "没有可读取电量的设备";
+    }
+
+    private static string BuildEmptyStateDescription(BluetoothRefreshResult result)
+    {
+        if (result.ConnectedLeDeviceCount == 0)
+        {
+            return "当前没有已连接的 Bluetooth LE 设备。连接受支持设备后，面板会自动刷新。";
+        }
+
+        return "已连接设备中没有通过公开标准接口读取到电量。应用只显示 BAS 读取成功的设备。";
     }
 
     private void NativeMessageBox(string message, string caption)

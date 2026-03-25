@@ -104,6 +104,23 @@ public sealed partial class PanelWindow : Window
         ViewModel.SetDevices(devices);
     }
 
+    public void MarkDevicesAsStale()
+    {
+        ViewModel.MarkDevicesAsStale();
+    }
+
+    public void UpdateEmptyState(string title, string description)
+    {
+        ViewModel.UpdateEmptyState(title, description);
+    }
+
+    public void UpdateLastRefresh(DateTimeOffset? lastRefreshUtc)
+    {
+        ViewModel.UpdateLastRefresh(lastRefreshUtc);
+    }
+
+    public bool HasDevices => ViewModel.HasDevices;
+
     private void ShowAtPosition(DisplayArea displayArea, int proposedX, int proposedY, bool preferBelow)
     {
         RectInt32 workArea = displayArea.WorkArea;

@@ -29,4 +29,18 @@ public sealed class DeviceBatteryInfo
         : "等待首次读取";
 
     public string FreshnessText => IsStale ? "缓存值" : "最新值";
+
+    public DeviceBatteryInfo ToStaleSnapshot()
+    {
+        return new DeviceBatteryInfo
+        {
+            DeviceId = DeviceId,
+            DisplayName = DisplayName,
+            BatteryPercent = BatteryPercent,
+            ConnectionStateText = ConnectionStateText,
+            SourceKindText = SourceKindText,
+            LastUpdatedUtc = LastUpdatedUtc,
+            IsStale = true,
+        };
+    }
 }

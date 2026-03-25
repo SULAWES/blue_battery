@@ -153,6 +153,10 @@
                         TextWrapping="WrapWholeWords" />
                     <TextBlock
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="{x:Bind ViewModel.LastRefreshText, Mode=OneWay}"
+                        TextWrapping="WrapWholeWords" />
+                    <TextBlock
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
                         TextWrapping="WrapWholeWords" />
                 </StackPanel>
