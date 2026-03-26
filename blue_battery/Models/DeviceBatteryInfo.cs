@@ -36,6 +36,7 @@ public sealed class DeviceBatteryInfo
         DeviceSnapshotState.Live => AppStrings.FreshnessLatest,
         DeviceSnapshotState.RestoredCache => AppStrings.FreshnessRestoredCache,
         DeviceSnapshotState.RefreshFailedCache => AppStrings.FreshnessRefreshFailedCache,
+        DeviceSnapshotState.Disconnected => AppStrings.FreshnessDisconnected,
         _ => AppStrings.FreshnessFallbackCache,
     };
 
@@ -50,6 +51,20 @@ public sealed class DeviceBatteryInfo
             SourceKindText = SourceKindText,
             LastUpdatedUtc = LastUpdatedUtc,
             SnapshotState = snapshotState,
+        };
+    }
+
+    public DeviceBatteryInfo ToDisconnectedSnapshot()
+    {
+        return new DeviceBatteryInfo
+        {
+            DeviceId = DeviceId,
+            DisplayName = DisplayName,
+            BatteryPercent = BatteryPercent,
+            ConnectionStateText = AppStrings.DisconnectedStateText,
+            SourceKindText = SourceKindText,
+            LastUpdatedUtc = LastUpdatedUtc,
+            SnapshotState = DeviceSnapshotState.Disconnected,
         };
     }
 }

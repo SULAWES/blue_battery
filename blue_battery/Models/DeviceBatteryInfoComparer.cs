@@ -30,6 +30,12 @@ public sealed class DeviceBatteryInfoComparer : IComparer<DeviceBatteryInfo>
             return freshnessComparison;
         }
 
+        int snapshotStateComparison = x.SnapshotState.CompareTo(y.SnapshotState);
+        if (snapshotStateComparison != 0)
+        {
+            return snapshotStateComparison;
+        }
+
         int batteryAvailabilityComparison = CompareBatteryAvailability(x.BatteryPercent, y.BatteryPercent);
         if (batteryAvailabilityComparison != 0)
         {

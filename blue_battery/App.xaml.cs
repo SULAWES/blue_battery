@@ -31,7 +31,7 @@ public partial class App : Application
     private CancellationTokenSource? _autoRefreshDebounceCts;
     private DateTimeOffset? _lastSuccessfulRefreshUtc;
     private AppStateSnapshot? _restoredSnapshot;
-    private readonly HashSet<string> _displayedDeviceIds = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, DeviceBatteryInfo> _displayedDevices = new(StringComparer.Ordinal);
 
     public App()
     {
@@ -215,7 +215,7 @@ public partial class App : Application
             ConnectedLeDeviceCount = staleDevices.Length,
         }, missingDeviceCount: 0));
         _trayIconService?.UpdateBatteryIcon(GetLowestBatteryPercent(staleDevices));
-        UpdateDisplayedDeviceIds(staleDevices);
+        UpdateDisplayedDevices(staleDevices);
     }
 
     private async Task RefreshDevicesAsync(bool forceRefresh)
@@ -239,7 +239,8 @@ public partial class App : Application
         {
             BluetoothRefreshResult result = await _bluetoothDeviceDiscoveryService.GetConnectedDevicesAsync();
             int missingDeviceCount = CountMissingDevices(result.Devices);
-            _panelWindow?.SetDevices(result.Devices);
+            IReadOnlyList<DeviceBatteryInfo> displayDevices = MergeWithMissingDevices(result.Devices);
+            _panelWindow?.SetDevices(displayDevices);
             _panelWindow?.UpdateEmptyState(
                 BuildEmptyStateTitle(result, missingDeviceCount),
                 BuildEmptyStateDescription(result, missingDeviceCount));
@@ -256,7 +257,7 @@ public partial class App : Application
                 Devices = result.Devices.ToArray(),
             };
             await _appStateStore.SaveAsync(_restoredSnapshot);
-            UpdateDisplayedDeviceIds(result.Devices);
+            UpdateDisplayedDevices(displayDevices);
             EnsureDiscoveryMonitoringStarted();
         }
         catch (Exception ex)
@@ -275,7 +276,7 @@ public partial class App : Application
                     AppStrings.RefreshFailedDescription);
                 _panelWindow?.UpdateStatusMessage(AppStrings.BuildStatusRefreshFailed(timestamp, ex.Message));
                 _trayIconService?.UpdateBatteryIcon(null);
-                _displayedDeviceIds.Clear();
+                _displayedDevices.Clear();
             }
 
             _panelWindow?.UpdateLastRefresh(_lastSuccessfulRefreshUtc);
@@ -438,7 +439,7 @@ public partial class App : Application
 
     private int CountMissingDevices(IEnumerable<DeviceBatteryInfo> currentDevices)
     {
-        if (_displayedDeviceIds.Count == 0)
+        if (_displayedDevices.Count == 0)
         {
             return 0;
         }
@@ -448,19 +449,40 @@ public partial class App : Application
             .Where(static deviceId => !string.IsNullOrWhiteSpace(deviceId))
             .ToHashSet(StringComparer.Ordinal);
 
-        return _displayedDeviceIds.Count(deviceId => !currentDeviceIds.Contains(deviceId));
+        return _displayedDevices.Keys.Count(deviceId => !currentDeviceIds.Contains(deviceId));
     }
 
-    private void UpdateDisplayedDeviceIds(IEnumerable<DeviceBatteryInfo> devices)
+    private IReadOnlyList<DeviceBatteryInfo> MergeWithMissingDevices(IReadOnlyList<DeviceBatteryInfo> currentDevices)
     {
-        _displayedDeviceIds.Clear();
-
-        foreach (string deviceId in devices
-                     .Select(device => device.DeviceId)
-                     .Where(static deviceId => !string.IsNullOrWhiteSpace(deviceId))
-                     .Distinct(StringComparer.Ordinal))
+        if (_displayedDevices.Count == 0)
         {
-            _displayedDeviceIds.Add(deviceId);
+            return currentDevices;
+        }
+
+        Dictionary<string, DeviceBatteryInfo> currentById = currentDevices
+            .Where(static device => !string.IsNullOrWhiteSpace(device.DeviceId))
+            .ToDictionary(device => device.DeviceId, StringComparer.Ordinal);
+
+        List<DeviceBatteryInfo> mergedDevices = [.. currentDevices];
+
+        foreach ((string deviceId, DeviceBatteryInfo previousDevice) in _displayedDevices)
+        {
+            if (!currentById.ContainsKey(deviceId))
+            {
+                mergedDevices.Add(previousDevice.ToDisconnectedSnapshot());
+            }
+        }
+
+        return mergedDevices;
+    }
+
+    private void UpdateDisplayedDevices(IEnumerable<DeviceBatteryInfo> devices)
+    {
+        _displayedDevices.Clear();
+
+        foreach (DeviceBatteryInfo device in devices.Where(static device => !string.IsNullOrWhiteSpace(device.DeviceId)))
+        {
+            _displayedDevices[device.DeviceId] = device;
         }
     }
 }

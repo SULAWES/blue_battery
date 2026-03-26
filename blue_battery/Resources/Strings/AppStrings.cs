@@ -21,12 +21,14 @@ public static class AppStrings
         NoSuccessfulRefreshYet = "尚无成功刷新",
         LastRefreshFormat = "最近成功刷新 {0}",
         ConnectedStateText = "已连接",
+        DisconnectedStateText = "已断开",
         GattBasSourceText = "GATT BAS",
         UnknownDeviceName = "未知蓝牙设备",
         WaitingForFirstRead = "等待首次读取",
         FreshnessLatest = "最新值",
         FreshnessRestoredCache = "启动缓存",
         FreshnessRefreshFailedCache = "失败缓存",
+        FreshnessDisconnected = "已断开",
         FreshnessFallbackCache = "缓存值",
         SettingsReservedStatus = "设置入口已预留，首版稍后接入。",
         SettingsReservedMessage = "设置入口已预留，当前版本尚未接入实际设置页。",
@@ -85,12 +87,14 @@ public static class AppStrings
     public static string InitialEmptyStateDescription => Current.InitialEmptyStateDescription;
     public static string NoSuccessfulRefreshYet => Current.NoSuccessfulRefreshYet;
     public static string ConnectedStateText => Current.ConnectedStateText;
+    public static string DisconnectedStateText => Current.DisconnectedStateText;
     public static string GattBasSourceText => Current.GattBasSourceText;
     public static string UnknownDeviceName => Current.UnknownDeviceName;
     public static string WaitingForFirstRead => Current.WaitingForFirstRead;
     public static string FreshnessLatest => Current.FreshnessLatest;
     public static string FreshnessRestoredCache => Current.FreshnessRestoredCache;
     public static string FreshnessRefreshFailedCache => Current.FreshnessRefreshFailedCache;
+    public static string FreshnessDisconnected => Current.FreshnessDisconnected;
     public static string FreshnessFallbackCache => Current.FreshnessFallbackCache;
     public static string SettingsReservedStatus => Current.SettingsReservedStatus;
     public static string SettingsReservedMessage => Current.SettingsReservedMessage;
@@ -170,12 +174,14 @@ public static class AppStrings
         public required string NoSuccessfulRefreshYet { get; init; }
         public required string LastRefreshFormat { get; init; }
         public required string ConnectedStateText { get; init; }
+        public required string DisconnectedStateText { get; init; }
         public required string GattBasSourceText { get; init; }
         public required string UnknownDeviceName { get; init; }
         public required string WaitingForFirstRead { get; init; }
         public required string FreshnessLatest { get; init; }
         public required string FreshnessRestoredCache { get; init; }
         public required string FreshnessRefreshFailedCache { get; init; }
+        public required string FreshnessDisconnected { get; init; }
         public required string FreshnessFallbackCache { get; init; }
         public required string SettingsReservedStatus { get; init; }
         public required string SettingsReservedMessage { get; init; }
