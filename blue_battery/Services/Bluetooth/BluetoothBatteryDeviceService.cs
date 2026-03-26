@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BlueBattery.Models;
+using BlueBattery.Resources.Strings;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Devices.Enumeration;
@@ -90,8 +91,8 @@ public sealed class BluetoothBatteryDeviceService
                             DeviceId = deviceInfo.Id,
                             DisplayName = ResolveDisplayName(deviceInfo, bluetoothDevice),
                             BatteryPercent = batteryPercent.Value,
-                            ConnectionStateText = "已连接",
-                            SourceKindText = "GATT BAS",
+                            ConnectionStateText = AppStrings.ConnectedStateText,
+                            SourceKindText = AppStrings.GattBasSourceText,
                             LastUpdatedUtc = DateTimeOffset.UtcNow,
                         };
                     }
@@ -118,7 +119,7 @@ public sealed class BluetoothBatteryDeviceService
             return deviceInfo.Name;
         }
 
-        return "未知蓝牙设备";
+        return AppStrings.UnknownDeviceName;
     }
 
     private static byte? TryReadBatteryPercent(IBuffer value)

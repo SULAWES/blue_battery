@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BlueBattery.Diagnostics;
 using BlueBattery.Models;
+using BlueBattery.Resources.Strings;
 using BlueBattery.Services.Bluetooth;
 using BlueBattery.Services.State;
 using BlueBattery.Services.Tray;
@@ -16,7 +17,7 @@ namespace BlueBattery;
 
 public partial class App : Application
 {
-    private const string DefaultTooltip = "blue_battery";
+    private const string DefaultTooltip = nameof(DefaultTooltip);
     private readonly IBluetoothDeviceDiscoveryService _bluetoothDeviceDiscoveryService = new BluetoothDeviceDiscoveryService();
     private readonly IBatteryTelemetryService _bluetoothBatteryTelemetryService = new BluetoothBatteryTelemetryService();
     private readonly IAppStateStore _appStateStore = new JsonAppStateStore();
@@ -53,7 +54,7 @@ public partial class App : Application
         _trayIconService.AboutRequested += OnAboutRequested;
         _trayIconService.ExitRequested += OnExitRequested;
         _trayIconService.Show();
-        _trayIconService.UpdateTooltip(DefaultTooltip);
+        _trayIconService.UpdateTooltip(AppStrings.AppTitle);
 
         _bluetoothDeviceDiscoveryService.RefreshRequested += OnAutoRefreshRequested;
         _bluetoothBatteryTelemetryService.RefreshRequested += OnAutoRefreshRequested;
@@ -104,8 +105,8 @@ public partial class App : Application
         EnqueueOnUiThread(() =>
         {
             EnsurePanelWindow();
-            _panelWindow?.UpdateStatusMessage("设置入口已预留，首版稍后接入。");
-            NativeMessageBox("设置入口已预留，当前版本尚未接入实际设置页。", "blue_battery");
+            _panelWindow?.UpdateStatusMessage(AppStrings.SettingsReservedStatus);
+            NativeMessageBox(AppStrings.SettingsReservedMessage, AppStrings.AppTitle);
         });
     }
 
@@ -114,8 +115,8 @@ public partial class App : Application
         EnqueueOnUiThread(() =>
         {
             EnsurePanelWindow();
-            _panelWindow?.UpdateStatusMessage("已打开关于信息。");
-            NativeMessageBox("blue_battery\r\nWinUI 3 托盘电量应用原型。\r\n当前阶段：托盘壳层、单实例与设备列表承载结构。", "关于 blue_battery");
+            _panelWindow?.UpdateStatusMessage(AppStrings.AboutOpenedStatus);
+            NativeMessageBox(AppStrings.AboutMessage, AppStrings.AboutCaption);
         });
     }
 
@@ -205,9 +206,9 @@ public partial class App : Application
             .ToArray();
 
         _panelWindow?.SetDevices(staleDevices);
-        _panelWindow?.UpdateEmptyState("暂无实时数据", "当前显示上次成功刷新保存的缓存值，应用正在读取最新蓝牙设备状态。");
+        _panelWindow?.UpdateEmptyState(AppStrings.RestoredSnapshotTitle, AppStrings.RestoredSnapshotDescription);
         _panelWindow?.UpdateLastRefresh(_lastSuccessfulRefreshUtc);
-        _panelWindow?.UpdateStatusMessage("已恢复上次成功快照，正在读取最新设备状态...");
+        _panelWindow?.UpdateStatusMessage(AppStrings.RestoredSnapshotStatus);
         _trayIconService?.UpdateTooltip(BuildTooltip(new BluetoothRefreshResult
         {
             Devices = staleDevices,
@@ -232,7 +233,7 @@ public partial class App : Application
 
         _isRefreshingDevices = true;
         EnsurePanelWindow();
-        _panelWindow?.UpdateStatusMessage("正在刷新蓝牙设备电量...");
+        _panelWindow?.UpdateStatusMessage(AppStrings.RefreshingBatteryStatus);
 
         try
         {
@@ -264,21 +265,21 @@ public partial class App : Application
             if (_panelWindow?.HasDevices == true)
             {
                 _panelWindow.MarkDevicesAsStale(DeviceSnapshotState.RefreshFailedCache);
-                _panelWindow.UpdateStatusMessage($"刷新失败，当前显示上次成功读取的缓存值。{timestamp}。{ex.Message}");
+                _panelWindow.UpdateStatusMessage(AppStrings.BuildStatusRefreshFailedCache(timestamp, ex.Message));
             }
             else
             {
                 _panelWindow?.SetDevices(Array.Empty<DeviceBatteryInfo>());
                 _panelWindow?.UpdateEmptyState(
-                    "刷新失败",
-                    "当前未能读取蓝牙设备电量。请确认设备仍已连接，并稍后再次手动刷新。");
-                _panelWindow?.UpdateStatusMessage($"刷新失败。{timestamp}。{ex.Message}");
+                    AppStrings.RefreshFailedTitle,
+                    AppStrings.RefreshFailedDescription);
+                _panelWindow?.UpdateStatusMessage(AppStrings.BuildStatusRefreshFailed(timestamp, ex.Message));
                 _trayIconService?.UpdateBatteryIcon(null);
                 _displayedDeviceIds.Clear();
             }
 
             _panelWindow?.UpdateLastRefresh(_lastSuccessfulRefreshUtc);
-            _trayIconService?.UpdateTooltip($"{DefaultTooltip} · 刷新失败");
+            _trayIconService?.UpdateTooltip(AppStrings.TooltipRefreshFailed);
         }
         finally
         {
@@ -300,23 +301,23 @@ public partial class App : Application
         {
             if (missingDeviceCount > 0)
             {
-                return $"已刷新 {result.Devices.Count} 台设备电量。另有 {missingDeviceCount} 台设备已断开或暂不可读。时间 {timestamp}。";
-            }
+            return AppStrings.BuildStatusRefreshSuccessWithMissing(result.Devices.Count, missingDeviceCount, timestamp);
+        }
 
-            return $"已刷新 {result.Devices.Count} 台设备电量。已连接 LE 设备 {result.ConnectedLeDeviceCount} 台。时间 {timestamp}。";
+            return AppStrings.BuildStatusRefreshSuccess(result.Devices.Count, result.ConnectedLeDeviceCount, timestamp);
         }
 
         if (missingDeviceCount > 0)
         {
-            return $"此前显示的 {missingDeviceCount} 台设备当前已断开，或暂时无法读取电量。时间 {timestamp}。";
+            return AppStrings.BuildStatusOnlyMissing(missingDeviceCount, timestamp);
         }
 
         if (result.ConnectedLeDeviceCount > 0)
         {
-            return $"已连接 LE 设备 {result.ConnectedLeDeviceCount} 台，但没有读取到可显示的公开电量数据。时间 {timestamp}。";
+            return AppStrings.BuildStatusNoReadable(result.ConnectedLeDeviceCount, timestamp);
         }
 
-        return $"当前没有已连接的 LE 设备。时间 {timestamp}。";
+        return AppStrings.BuildStatusNoConnected(timestamp);
     }
 
     private static string BuildTooltip(BluetoothRefreshResult result, int missingDeviceCount)
@@ -325,12 +326,12 @@ public partial class App : Application
         {
             if (missingDeviceCount > 0)
             {
-                return $"{DefaultTooltip} · 设备已断开";
+                return AppStrings.TooltipDisconnected;
             }
 
             return result.ConnectedLeDeviceCount > 0
-                ? $"{DefaultTooltip} · 无可读取电量设备"
-                : DefaultTooltip;
+                ? AppStrings.TooltipNoReadable
+                : AppStrings.AppTitle;
         }
 
         int lowestBattery = result.Devices
@@ -339,7 +340,7 @@ public partial class App : Application
             .DefaultIfEmpty(0)
             .Min();
 
-        return $"{DefaultTooltip} · {result.Devices.Count} 台设备 · 最低 {lowestBattery}%";
+        return AppStrings.BuildTooltipSummary(result.Devices.Count, lowestBattery);
     }
 
     private static int? GetLowestBatteryPercent(System.Collections.Generic.IEnumerable<DeviceBatteryInfo> devices)
@@ -354,30 +355,30 @@ public partial class App : Application
     {
         if (missingDeviceCount > 0)
         {
-            return "设备已断开或暂不可读";
+            return AppStrings.EmptyStateMissingTitle;
         }
 
         if (result.ConnectedLeDeviceCount == 0)
         {
-            return "没有已连接蓝牙设备";
+            return AppStrings.EmptyStateNoConnectedTitle;
         }
 
-        return "没有可读取电量的设备";
+        return AppStrings.EmptyStateNoReadableTitle;
     }
 
     private static string BuildEmptyStateDescription(BluetoothRefreshResult result, int missingDeviceCount)
     {
         if (missingDeviceCount > 0)
         {
-            return $"此前显示的 {missingDeviceCount} 台设备当前已断开，或暂时无法通过公开标准接口读取电量。";
+            return AppStrings.BuildEmptyStateMissingDescription(missingDeviceCount);
         }
 
         if (result.ConnectedLeDeviceCount == 0)
         {
-            return "当前没有已连接的 Bluetooth LE 设备。连接受支持设备后，面板会自动刷新。";
+            return AppStrings.EmptyStateNoConnectedDescription;
         }
 
-        return "已连接设备中没有通过公开标准接口读取到电量。应用只显示 BAS 读取成功的设备。";
+        return AppStrings.EmptyStateNoReadableDescription;
     }
 
     private void NativeMessageBox(string message, string caption)
@@ -430,7 +431,7 @@ public partial class App : Application
         EnqueueOnUiThread(async () =>
         {
             EnsurePanelWindow();
-            _panelWindow?.UpdateStatusMessage($"{reason} 正在自动刷新设备列表...");
+            _panelWindow?.UpdateStatusMessage(AppStrings.BuildStatusAutoRefresh(reason));
             await RefreshDevicesAsync(forceRefresh: true);
         });
     }

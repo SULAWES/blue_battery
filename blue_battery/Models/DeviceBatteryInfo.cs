@@ -1,4 +1,5 @@
 using System;
+using BlueBattery.Resources.Strings;
 
 namespace BlueBattery.Models;
 
@@ -10,9 +11,9 @@ public sealed class DeviceBatteryInfo
 
     public int? BatteryPercent { get; init; }
 
-    public string ConnectionStateText { get; init; } = "已连接";
+    public string ConnectionStateText { get; init; } = AppStrings.ConnectedStateText;
 
-    public string SourceKindText { get; init; } = "GATT BAS";
+    public string SourceKindText { get; init; } = AppStrings.GattBasSourceText;
 
     public DateTimeOffset? LastUpdatedUtc { get; init; }
 
@@ -28,14 +29,14 @@ public sealed class DeviceBatteryInfo
 
     public string TimestampText => LastUpdatedUtc is DateTimeOffset timestamp
         ? $"更新于 {timestamp.ToLocalTime():HH:mm:ss}"
-        : "等待首次读取";
+        : AppStrings.WaitingForFirstRead;
 
     public string FreshnessText => SnapshotState switch
     {
-        DeviceSnapshotState.Live => "最新值",
-        DeviceSnapshotState.RestoredCache => "启动缓存",
-        DeviceSnapshotState.RefreshFailedCache => "失败缓存",
-        _ => "缓存值",
+        DeviceSnapshotState.Live => AppStrings.FreshnessLatest,
+        DeviceSnapshotState.RestoredCache => AppStrings.FreshnessRestoredCache,
+        DeviceSnapshotState.RefreshFailedCache => AppStrings.FreshnessRefreshFailedCache,
+        _ => AppStrings.FreshnessFallbackCache,
     };
 
     public DeviceBatteryInfo ToStaleSnapshot(DeviceSnapshotState snapshotState = DeviceSnapshotState.RefreshFailedCache)

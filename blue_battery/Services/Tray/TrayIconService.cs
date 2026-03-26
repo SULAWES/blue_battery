@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using BlueBattery.Interop;
+using BlueBattery.Resources.Strings;
 
 namespace BlueBattery.Services.Tray;
 
@@ -47,7 +48,7 @@ internal sealed class TrayIconService : IDisposable
             uFlags = NativeMethods.NIF_MESSAGE | NativeMethods.NIF_ICON | NativeMethods.NIF_TIP,
             uCallbackMessage = NativeMethods.WM_APP + 1,
             hIcon = _iconHandle,
-            szTip = "blue_battery"
+            szTip = AppStrings.AppTitle
         };
 
         IntPtr newWndProc = Marshal.GetFunctionPointerForDelegate(_wndProc);
@@ -141,11 +142,11 @@ internal sealed class TrayIconService : IDisposable
         IntPtr menuHandle = NativeMethods.CreatePopupMenu();
         try
         {
-            NativeMethods.AppendMenu(menuHandle, NativeMethods.MF_STRING, RefreshCommandId, "立即刷新");
-            NativeMethods.AppendMenu(menuHandle, NativeMethods.MF_STRING, SettingsCommandId, "设置");
-            NativeMethods.AppendMenu(menuHandle, NativeMethods.MF_STRING, AboutCommandId, "关于");
+            NativeMethods.AppendMenu(menuHandle, NativeMethods.MF_STRING, RefreshCommandId, AppStrings.MenuRefresh);
+            NativeMethods.AppendMenu(menuHandle, NativeMethods.MF_STRING, SettingsCommandId, AppStrings.MenuSettings);
+            NativeMethods.AppendMenu(menuHandle, NativeMethods.MF_STRING, AboutCommandId, AppStrings.MenuAbout);
             NativeMethods.AppendMenu(menuHandle, NativeMethods.MF_SEPARATOR, 0, null);
-            NativeMethods.AppendMenu(menuHandle, NativeMethods.MF_STRING, ExitCommandId, "退出");
+            NativeMethods.AppendMenu(menuHandle, NativeMethods.MF_STRING, ExitCommandId, AppStrings.MenuExit);
 
             NativeMethods.GetCursorPos(out NativeMethods.POINT point);
             NativeMethods.SetForegroundWindow(_windowHandle);

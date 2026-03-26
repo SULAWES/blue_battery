@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BlueBattery.Resources.Strings;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Foundation;
@@ -156,7 +157,7 @@ public sealed class BluetoothBatteryTelemetryService : IBatteryTelemetryService
 
     private void OnCharacteristicValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
     {
-        RaiseRefreshRequested("检测到设备电量变化。");
+        RaiseRefreshRequested(AppStrings.ReasonBatteryChanged);
     }
 
     private void UpdatePollingTimer()
@@ -176,7 +177,7 @@ public sealed class BluetoothBatteryTelemetryService : IBatteryTelemetryService
 
     private void OnPollTimerTick(object? state)
     {
-        RaiseRefreshRequested("正在按轮询策略刷新设备电量。");
+        RaiseRefreshRequested(AppStrings.ReasonPolling);
     }
 
     private void RaiseRefreshRequested(string reason)

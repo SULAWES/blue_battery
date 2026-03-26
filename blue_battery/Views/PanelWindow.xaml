@@ -19,7 +19,7 @@
                 <TextBlock
                     FontSize="22"
                     FontWeight="SemiBold"
-                    Text="blue_battery" />
+                    Text="{x:Bind ViewModel.AppTitle, Mode=OneWay}" />
                 <TextBlock
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     Text="{x:Bind ViewModel.Subtitle, Mode=OneWay}"
@@ -30,7 +30,7 @@
                 Grid.Row="1"
                 IsOpen="True"
                 IsClosable="False"
-                Message="当前面板会显示实时值、启动恢复缓存和刷新失败缓存，并区分设备断开或暂不可读的状态。"
+                Message="{x:Bind ViewModel.InfoBarMessage, Mode=OneWay}"
                 Severity="Informational" />
 
             <Grid
@@ -44,7 +44,7 @@
                     <StackPanel Spacing="4">
                         <TextBlock
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            Text="已显示设备" />
+                            Text="{x:Bind ViewModel.DeviceCountLabel, Mode=OneWay}" />
                         <TextBlock
                             FontSize="24"
                             FontWeight="SemiBold"
@@ -59,7 +59,7 @@
                     <StackPanel Spacing="4">
                         <TextBlock
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            Text="最低电量" />
+                            Text="{x:Bind ViewModel.LowestBatteryLabel, Mode=OneWay}" />
                         <TextBlock
                             FontSize="24"
                             FontWeight="SemiBold"
@@ -146,7 +146,7 @@
                 Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
                 CornerRadius="12">
                 <StackPanel Spacing="4">
-                    <TextBlock FontWeight="SemiBold" Text="当前状态" />
+                    <TextBlock FontWeight="SemiBold" Text="{x:Bind ViewModel.CurrentStatusLabel, Mode=OneWay}" />
                     <TextBlock
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Text="{x:Bind ViewModel.ScopeHint, Mode=OneWay}"

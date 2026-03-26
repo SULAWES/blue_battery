@@ -1,4 +1,5 @@
 using System;
+using BlueBattery.Resources.Strings;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Enumeration;
 
@@ -63,17 +64,17 @@ public sealed class BluetoothDeviceWatcherService : IDisposable
 
     private void OnAdded(DeviceWatcher sender, DeviceInformation args)
     {
-        RaiseDevicesChanged("检测到蓝牙设备接入。");
+        RaiseDevicesChanged(AppStrings.ReasonDeviceAdded);
     }
 
     private void OnUpdated(DeviceWatcher sender, DeviceInformationUpdate args)
     {
-        RaiseDevicesChanged("检测到蓝牙设备状态变化。");
+        RaiseDevicesChanged(AppStrings.ReasonDeviceUpdated);
     }
 
     private void OnRemoved(DeviceWatcher sender, DeviceInformationUpdate args)
     {
-        RaiseDevicesChanged("检测到蓝牙设备断开。");
+        RaiseDevicesChanged(AppStrings.ReasonDeviceRemoved);
     }
 
     private void RaiseDevicesChanged(string reason)

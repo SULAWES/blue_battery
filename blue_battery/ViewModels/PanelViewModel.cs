@@ -5,16 +5,17 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using BlueBattery.Models;
+using BlueBattery.Resources.Strings;
 using Microsoft.UI.Xaml;
 
 namespace BlueBattery.ViewModels;
 
 public sealed class PanelViewModel : INotifyPropertyChanged
 {
-    private string _statusMessage = "等待蓝牙读取服务接入。";
-    private string _emptyStateTitle = "暂无可显示设备";
-    private string _emptyStateDescription = "设备列表结构已经就绪。接入蓝牙读取后，这里会只显示已连接且通过 GATT Battery Service 成功读取到电量的设备。";
-    private string _lastRefreshText = "尚无成功刷新";
+    private string _statusMessage = AppStrings.InitialStatusMessage;
+    private string _emptyStateTitle = AppStrings.InitialEmptyStateTitle;
+    private string _emptyStateDescription = AppStrings.InitialEmptyStateDescription;
+    private string _lastRefreshText = AppStrings.NoSuccessfulRefreshYet;
 
     public PanelViewModel()
     {
@@ -25,9 +26,19 @@ public sealed class PanelViewModel : INotifyPropertyChanged
 
     public ObservableCollection<DeviceBatteryInfo> Devices { get; } = [];
 
-    public string Subtitle => "显示当前已连接且可通过公开标准接口读取电量的设备。";
+    public string AppTitle => AppStrings.AppTitle;
 
-    public string ScopeHint => "仅显示 Windows 可原生读取电量且本应用读取成功的设备。";
+    public string Subtitle => AppStrings.PanelSubtitle;
+
+    public string ScopeHint => AppStrings.ScopeHint;
+
+    public string InfoBarMessage => AppStrings.InfoBarMessage;
+
+    public string DeviceCountLabel => AppStrings.DeviceCountLabel;
+
+    public string LowestBatteryLabel => AppStrings.LowestBatteryLabel;
+
+    public string CurrentStatusLabel => AppStrings.CurrentStatusLabel;
 
     public string EmptyStateTitle
     {
@@ -78,7 +89,7 @@ public sealed class PanelViewModel : INotifyPropertyChanged
 
     public string DeviceSectionTitle => Devices.Count > 0
         ? $"设备列表 ({Devices.Count})"
-        : "设备列表";
+        : AppStrings.DeviceSectionTitle;
 
     public string LastRefreshText
     {
@@ -161,8 +172,8 @@ public sealed class PanelViewModel : INotifyPropertyChanged
     public void UpdateLastRefresh(DateTimeOffset? lastRefreshUtc)
     {
         LastRefreshText = lastRefreshUtc is DateTimeOffset timestamp
-            ? $"最近成功刷新 {timestamp.ToLocalTime():HH:mm:ss}"
-            : "尚无成功刷新";
+            ? AppStrings.BuildLastRefreshText(timestamp)
+            : AppStrings.NoSuccessfulRefreshYet;
     }
 
     public bool HasDevices => Devices.Count > 0;
