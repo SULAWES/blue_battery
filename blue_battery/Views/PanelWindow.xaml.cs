@@ -11,8 +11,8 @@ namespace BlueBattery;
 
 public sealed partial class PanelWindow : Window
 {
-    private const int PanelWidth = 420;
-    private const int PanelHeight = 520;
+    private const int PanelWidth = 388;
+    private const int PanelHeight = 500;
     private const int PanelMargin = 12;
     private const int EdgeTolerance = 32;
     private readonly IntPtr _hWnd;
