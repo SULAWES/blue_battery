@@ -26,6 +26,7 @@ public sealed partial class PanelWindow : Window
         _hWnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         WindowId windowId = Win32Interop.GetWindowIdFromWindow(_hWnd);
         _appWindow = AppWindow.GetFromWindowId(windowId);
+        ConfigureWindowChrome();
 
         Activated += OnActivated;
         Closed += (_, _) =>
@@ -120,6 +121,19 @@ public sealed partial class PanelWindow : Window
     }
 
     public bool HasDevices => ViewModel.HasDevices;
+
+    private void ConfigureWindowChrome()
+    {
+        _appWindow.IsShownInSwitchers = false;
+
+        if (_appWindow.Presenter is OverlappedPresenter presenter)
+        {
+            presenter.IsMaximizable = false;
+            presenter.IsMinimizable = false;
+            presenter.IsResizable = false;
+            presenter.SetBorderAndTitleBar(false, false);
+        }
+    }
 
     private void ShowAtPosition(DisplayArea displayArea, int proposedX, int proposedY, bool preferBelow)
     {
