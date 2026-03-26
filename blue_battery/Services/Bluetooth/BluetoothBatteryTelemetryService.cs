@@ -9,7 +9,7 @@ using Windows.Foundation;
 
 namespace BlueBattery.Services.Bluetooth;
 
-public sealed class BluetoothBatteryTelemetryService : IDisposable
+public sealed class BluetoothBatteryTelemetryService : IBatteryTelemetryService
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(60);
     private readonly SemaphoreSlim _syncLock = new(1, 1);
@@ -257,3 +257,4 @@ public sealed class BluetoothBatteryTelemetryService : IDisposable
         }
     }
 }
+

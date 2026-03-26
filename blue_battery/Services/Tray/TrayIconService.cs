@@ -38,7 +38,7 @@ internal sealed class TrayIconService : IDisposable
 
     public void Show()
     {
-        _iconHandle = NativeMethods.LoadIcon(IntPtr.Zero, (IntPtr)NativeMethods.IDI_APPLICATION);
+        _iconHandle = BatteryTrayIconRenderer.Create(batteryPercent: null);
         _notifyIconData = new NativeMethods.NOTIFYICONDATA
         {
             cbSize = (uint)Marshal.SizeOf<NativeMethods.NOTIFYICONDATA>(),
@@ -59,6 +59,12 @@ internal sealed class TrayIconService : IDisposable
     {
         _notifyIconData.szTip = text.Length <= 127 ? text : text[..127];
         NativeMethods.Shell_NotifyIcon(NativeMethods.NIM_MODIFY, ref _notifyIconData);
+    }
+
+    public void UpdateBatteryIcon(int? lowestBatteryPercent)
+    {
+        IntPtr newIconHandle = BatteryTrayIconRenderer.Create(lowestBatteryPercent);
+        ReplaceIcon(newIconHandle);
     }
 
     public bool TryGetIconRect(out NativeMethods.RECT rect)
@@ -155,6 +161,19 @@ internal sealed class TrayIconService : IDisposable
         finally
         {
             NativeMethods.DestroyMenu(menuHandle);
+        }
+    }
+
+    private void ReplaceIcon(IntPtr newIconHandle)
+    {
+        IntPtr previousIconHandle = _iconHandle;
+        _iconHandle = newIconHandle;
+        _notifyIconData.hIcon = newIconHandle;
+        NativeMethods.Shell_NotifyIcon(NativeMethods.NIM_MODIFY, ref _notifyIconData);
+
+        if (previousIconHandle != IntPtr.Zero)
+        {
+            NativeMethods.DestroyIcon(previousIconHandle);
         }
     }
 

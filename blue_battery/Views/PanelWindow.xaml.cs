@@ -104,9 +104,9 @@ public sealed partial class PanelWindow : Window
         ViewModel.SetDevices(devices);
     }
 
-    public void MarkDevicesAsStale()
+    public void MarkDevicesAsStale(DeviceSnapshotState snapshotState = DeviceSnapshotState.RefreshFailedCache)
     {
-        ViewModel.MarkDevicesAsStale();
+        ViewModel.MarkDevicesAsStale(snapshotState);
     }
 
     public void UpdateEmptyState(string title, string description)

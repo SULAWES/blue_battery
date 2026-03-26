@@ -27,6 +27,8 @@ internal static class NativeMethods
     internal const int IDI_APPLICATION = 32512;
     internal const uint MB_OK = 0x00000000;
     internal const uint MB_ICONINFORMATION = 0x00000040;
+    internal const uint BI_RGB = 0;
+    internal const uint DIB_RGB_COLORS = 0;
 
     internal delegate IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
@@ -75,6 +77,56 @@ internal static class NativeMethods
         internal int Top;
         internal int Right;
         internal int Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct POINT
+    {
+        internal int X;
+        internal int Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct BITMAPINFOHEADER
+    {
+        internal uint biSize;
+        internal int biWidth;
+        internal int biHeight;
+        internal ushort biPlanes;
+        internal ushort biBitCount;
+        internal uint biCompression;
+        internal uint biSizeImage;
+        internal int biXPelsPerMeter;
+        internal int biYPelsPerMeter;
+        internal uint biClrUsed;
+        internal uint biClrImportant;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct RGBQUAD
+    {
+        internal byte rgbBlue;
+        internal byte rgbGreen;
+        internal byte rgbRed;
+        internal byte rgbReserved;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct BITMAPINFO
+    {
+        internal BITMAPINFOHEADER bmiHeader;
+        internal RGBQUAD bmiColors;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct ICONINFO
+    {
+        [MarshalAs(UnmanagedType.Bool)]
+        internal bool fIcon;
+        internal uint xHotspot;
+        internal uint yHotspot;
+        internal IntPtr hbmMask;
+        internal IntPtr hbmColor;
     }
 
     [DllImport("user32.dll")]
@@ -129,10 +181,21 @@ internal static class NativeMethods
         IntPtr hWnd,
         IntPtr prcRect);
 
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct POINT
-    {
-        internal int X;
-        internal int Y;
-    }
+    [DllImport("gdi32.dll", SetLastError = true)]
+    internal static extern IntPtr CreateDIBSection(
+        IntPtr hdc,
+        ref BITMAPINFO pbmi,
+        uint iUsage,
+        out IntPtr ppvBits,
+        IntPtr hSection,
+        uint dwOffset);
+
+    [DllImport("gdi32.dll", SetLastError = true)]
+    internal static extern IntPtr CreateBitmap(int nWidth, int nHeight, uint cPlanes, uint cBitsPerPel, IntPtr lpvBits);
+
+    [DllImport("gdi32.dll", SetLastError = true)]
+    internal static extern bool DeleteObject(IntPtr hObject);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    internal static extern IntPtr CreateIconIndirect(ref ICONINFO iconInfo);
 }

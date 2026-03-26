@@ -125,9 +125,12 @@ public sealed class PanelViewModel : INotifyPropertyChanged
 
     public void SetDevices(IEnumerable<DeviceBatteryInfo> devices)
     {
+        List<DeviceBatteryInfo> orderedDevices = devices.ToList();
+        orderedDevices.Sort(DeviceBatteryInfoComparer.Instance);
+
         Devices.Clear();
 
-        foreach (DeviceBatteryInfo device in devices)
+        foreach (DeviceBatteryInfo device in orderedDevices)
         {
             Devices.Add(device);
         }
@@ -135,7 +138,7 @@ public sealed class PanelViewModel : INotifyPropertyChanged
         RaiseCollectionDerivedProperties();
     }
 
-    public void MarkDevicesAsStale()
+    public void MarkDevicesAsStale(DeviceSnapshotState snapshotState = DeviceSnapshotState.RefreshFailedCache)
     {
         if (Devices.Count == 0)
         {
@@ -143,7 +146,7 @@ public sealed class PanelViewModel : INotifyPropertyChanged
         }
 
         List<DeviceBatteryInfo> staleDevices = Devices
-            .Select(device => device.ToStaleSnapshot())
+            .Select(device => device.ToStaleSnapshot(snapshotState))
             .ToList();
 
         SetDevices(staleDevices);

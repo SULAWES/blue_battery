@@ -30,14 +30,11 @@ public sealed class BluetoothBatteryDeviceService
             }
         }
 
-        List<DeviceBatteryInfo> orderedDevices = supportedDevices
-            .OrderBy(device => device.BatteryPercent ?? int.MaxValue)
-            .ThenBy(device => device.DisplayName, StringComparer.CurrentCultureIgnoreCase)
-            .ToList();
+        supportedDevices.Sort(DeviceBatteryInfoComparer.Instance);
 
         return new BluetoothRefreshResult
         {
-            Devices = orderedDevices,
+            Devices = supportedDevices,
             ConnectedLeDeviceCount = devices.Count,
         };
     }
@@ -96,7 +93,6 @@ public sealed class BluetoothBatteryDeviceService
                             ConnectionStateText = "已连接",
                             SourceKindText = "GATT BAS",
                             LastUpdatedUtc = DateTimeOffset.UtcNow,
-                            IsStale = false,
                         };
                     }
                 }

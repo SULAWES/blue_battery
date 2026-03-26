@@ -16,7 +16,9 @@ public sealed class DeviceBatteryInfo
 
     public DateTimeOffset? LastUpdatedUtc { get; init; }
 
-    public bool IsStale { get; init; }
+    public DeviceSnapshotState SnapshotState { get; init; } = DeviceSnapshotState.Live;
+
+    public bool IsStale => SnapshotState != DeviceSnapshotState.Live;
 
     public string BatteryText => BatteryPercent is int value
         ? $"{Math.Clamp(value, 0, 100)}%"
@@ -28,9 +30,15 @@ public sealed class DeviceBatteryInfo
         ? $"更新于 {timestamp.ToLocalTime():HH:mm:ss}"
         : "等待首次读取";
 
-    public string FreshnessText => IsStale ? "缓存值" : "最新值";
+    public string FreshnessText => SnapshotState switch
+    {
+        DeviceSnapshotState.Live => "最新值",
+        DeviceSnapshotState.RestoredCache => "启动缓存",
+        DeviceSnapshotState.RefreshFailedCache => "失败缓存",
+        _ => "缓存值",
+    };
 
-    public DeviceBatteryInfo ToStaleSnapshot()
+    public DeviceBatteryInfo ToStaleSnapshot(DeviceSnapshotState snapshotState = DeviceSnapshotState.RefreshFailedCache)
     {
         return new DeviceBatteryInfo
         {
@@ -40,7 +48,7 @@ public sealed class DeviceBatteryInfo
             ConnectionStateText = ConnectionStateText,
             SourceKindText = SourceKindText,
             LastUpdatedUtc = LastUpdatedUtc,
-            IsStale = true,
+            SnapshotState = snapshotState,
         };
     }
 }

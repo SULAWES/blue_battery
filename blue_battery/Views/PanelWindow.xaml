@@ -30,7 +30,7 @@
                 Grid.Row="1"
                 IsOpen="True"
                 IsClosable="False"
-                Message="当前面板已切换为真实设备列表承载结构，下一步直接接入蓝牙读取服务。"
+                Message="当前面板会显示实时值、启动恢复缓存和刷新失败缓存，并区分设备断开或暂不可读的状态。"
                 Severity="Informational" />
 
             <Grid
