@@ -14,22 +14,16 @@
     </Window.SystemBackdrop>
 
     <Border
-        Padding="16"
+        Padding="14"
         Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-        BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}"
-        BorderThickness="1"
-        CornerRadius="18">
-        <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="14">
+        CornerRadius="12">
+        <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                <StackPanel Spacing="3">
+                <StackPanel VerticalAlignment="Center">
                     <TextBlock
                         FontSize="19"
                         FontWeight="SemiBold"
                         Text="{x:Bind ViewModel.AppTitle, Mode=OneWay}" />
-                    <TextBlock
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        Text="{x:Bind ViewModel.Subtitle, Mode=OneWay}"
-                        TextWrapping="WrapWholeWords" />
                 </StackPanel>
 
                 <Border
@@ -37,7 +31,7 @@
                     MinWidth="70"
                     Padding="10,7"
                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    CornerRadius="999">
+                    CornerRadius="12">
                     <StackPanel HorizontalAlignment="Center" Spacing="1">
                         <TextBlock
                             HorizontalAlignment="Center"
@@ -88,26 +82,21 @@
                         <TextBlock
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                             Style="{StaticResource CaptionTextBlockStyle}"
-                            Text="{x:Bind ViewModel.LastRefreshText, Mode=OneWay}" />
+                            Text="{x:Bind ViewModel.CurrentStatusLabel, Mode=OneWay}" />
                         <TextBlock
                             Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                             Style="{StaticResource BodyStrongTextBlockStyle}"
-                            Text="{x:Bind ViewModel.ScopeHint, Mode=OneWay}"
+                            Text="{x:Bind ViewModel.LastRefreshText, Mode=OneWay}"
                             TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                 </Border>
             </Grid>
 
             <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="10">
-                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="*" VerticalAlignment="Center">
                     <TextBlock
                         FontWeight="SemiBold"
                         Text="{x:Bind ViewModel.DeviceSectionTitle, Mode=OneWay}" />
-                    <TextBlock
-                        Grid.Column="1"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        Style="{StaticResource CaptionTextBlockStyle}"
-                        Text="{x:Bind ViewModel.CurrentStatusLabel, Mode=OneWay}" />
                 </Grid>
 
                 <Border
@@ -181,7 +170,7 @@
                                                 HorizontalAlignment="Right"
                                                 Padding="8,3"
                                                 Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                                                CornerRadius="999">
+                                                CornerRadius="12">
                                                 <TextBlock
                                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                     Style="{StaticResource CaptionTextBlockStyle}"
@@ -201,17 +190,11 @@
                 Padding="12,10"
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 CornerRadius="12">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <Grid ColumnDefinitions="*" ColumnSpacing="10">
                     <TextBlock
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
                         TextWrapping="WrapWholeWords" />
-                    <TextBlock
-                        Grid.Column="1"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        Style="{StaticResource CaptionTextBlockStyle}"
-                        Text="{x:Bind ViewModel.LastRefreshText, Mode=OneWay}"
-                        VerticalAlignment="Bottom" />
                 </Grid>
             </Border>
         </Grid>

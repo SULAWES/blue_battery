@@ -34,7 +34,7 @@ public static class AppStrings
         SettingsReservedMessage = "设置入口已预留，当前版本尚未接入实际设置页。",
         AboutOpenedStatus = "已打开关于信息。",
         AboutCaption = "关于 blue_battery",
-        AboutMessage = "blue_battery\r\nWinUI 3 托盘电量应用原型。\r\n当前阶段：托盘壳层、单实例与设备列表承载结构。",
+        AboutMessage = "blue_battery\r\nWinUI 3 托盘电量应用原型。\r\n\r\n仅显示 Windows 可原生读取电量且本应用读取成功的设备。\r\n支持实时值、启动恢复缓存和刷新失败缓存，并区分设备断开或暂不可读的状态。",
         RefreshingBatteryStatus = "正在刷新蓝牙设备电量...",
         RestoredSnapshotTitle = "暂无实时数据",
         RestoredSnapshotDescription = "当前显示上次成功刷新保存的缓存值，应用正在读取最新蓝牙设备状态。",
