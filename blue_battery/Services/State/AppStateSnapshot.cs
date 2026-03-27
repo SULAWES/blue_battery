@@ -8,5 +8,5 @@ public sealed class AppStateSnapshot
 {
     public DateTimeOffset? LastSuccessfulRefreshUtc { get; init; }
 
-    public IReadOnlyList<DeviceBatteryInfo> Devices { get; init; } = Array.Empty<DeviceBatteryInfo>();
+    public DeviceBatteryInfo[] Devices { get; init; } = Array.Empty<DeviceBatteryInfo>();
 }

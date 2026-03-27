@@ -218,7 +218,7 @@ public partial class App : Application
         }
 
         _lastSuccessfulRefreshUtc = _restoredSnapshot.LastSuccessfulRefreshUtc;
-        if (_restoredSnapshot.Devices.Count == 0)
+        if (_restoredSnapshot.Devices.Length == 0)
         {
             return;
         }
