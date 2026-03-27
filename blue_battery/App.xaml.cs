@@ -7,6 +7,7 @@ using BlueBattery.Models;
 using BlueBattery.Resources.Strings;
 using BlueBattery.Services.Bluetooth;
 using BlueBattery.Services.State;
+using BlueBattery.Services.Settings;
 using BlueBattery.Services.Tray;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
@@ -21,8 +22,10 @@ public partial class App : Application
     private readonly IBluetoothDeviceDiscoveryService _bluetoothDeviceDiscoveryService = new BluetoothDeviceDiscoveryService();
     private readonly IBatteryTelemetryService _bluetoothBatteryTelemetryService = new BluetoothBatteryTelemetryService();
     private readonly IAppStateStore _appStateStore = new JsonAppStateStore();
+    private readonly IStartupLaunchService _startupLaunchService = new StartupLaunchService();
     private MainWindow? _hostWindow;
     private PanelWindow? _panelWindow;
+    private SettingsWindow? _settingsWindow;
     private TrayIconService? _trayIconService;
     private bool _hasLoadedDeviceSnapshot;
     private bool _hasAttemptedStateRestore;
@@ -102,11 +105,22 @@ public partial class App : Application
 
     private void OnSettingsRequested(object? sender, EventArgs e)
     {
-        EnqueueOnUiThread(() =>
+        EnqueueOnUiThread(async () =>
         {
-            EnsurePanelWindow();
-            _panelWindow?.UpdateStatusMessage(AppStrings.SettingsReservedStatus);
-            NativeMessageBox(AppStrings.SettingsReservedMessage, AppStrings.AppTitle);
+            if (_hostWindow is null)
+            {
+                return;
+            }
+
+            EnsureSettingsWindow();
+            if (_settingsWindow is null)
+            {
+                return;
+            }
+
+            await _settingsWindow.LoadAsync();
+            _settingsWindow.ShowCentered(_hostWindow.WindowHandle);
+            _panelWindow?.UpdateStatusMessage(AppStrings.SettingsOpenedStatus);
         });
     }
 
@@ -132,6 +146,7 @@ public partial class App : Application
             _bluetoothBatteryTelemetryService.RefreshRequested -= OnAutoRefreshRequested;
             _bluetoothBatteryTelemetryService.Dispose();
             _panelWindow?.ForceClose();
+            _settingsWindow?.Close();
             _trayIconService?.Dispose();
             _hostWindow?.Close();
             Exit();
@@ -164,6 +179,14 @@ public partial class App : Application
         if (_panelWindow is null || _panelWindow.IsClosed)
         {
             _panelWindow = new PanelWindow();
+        }
+    }
+
+    private void EnsureSettingsWindow()
+    {
+        if (_settingsWindow is null || _settingsWindow.IsClosed)
+        {
+            _settingsWindow = new SettingsWindow(_startupLaunchService);
         }
     }
 

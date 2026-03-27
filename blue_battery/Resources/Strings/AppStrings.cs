@@ -30,11 +30,21 @@ public static class AppStrings
         FreshnessRefreshFailedCache = "失败缓存",
         FreshnessDisconnected = "已断开",
         FreshnessFallbackCache = "缓存值",
-        SettingsReservedStatus = "设置入口已预留，首版稍后接入。",
-        SettingsReservedMessage = "设置入口已预留，当前版本尚未接入实际设置页。",
+        SettingsOpenedStatus = "已打开设置窗口。",
         AboutOpenedStatus = "已打开关于信息。",
         AboutCaption = "关于 blue_battery",
         AboutMessage = "blue_battery\r\nWinUI 3 托盘电量应用原型。\r\n\r\n仅显示 Windows 可原生读取电量且本应用读取成功的设备。\r\n支持实时值、启动恢复缓存和刷新失败缓存，并区分设备断开或暂不可读的状态。",
+        SettingsTitle = "设置",
+        StartupSectionTitle = "启动项",
+        StartupToggleHeader = "开机自启动",
+        StartupToggleDescription = "启用后，应用会在 Windows 登录后自动启动并驻留到托盘。",
+        StartupLoadingStatus = "正在读取当前启动项状态...",
+        StartupEnabledStatus = "当前已启用开机自启动。",
+        StartupDisabledStatus = "当前未启用开机自启动。",
+        StartupDisabledByUserStatus = "该启动项已被系统或用户关闭，请到系统“启动应用”中重新启用。",
+        StartupDisabledByPolicyStatus = "该启动项已被系统策略禁用，当前无法修改。",
+        StartupUnknownStatus = "当前无法确定启动项状态。",
+        OpenSystemStartupSettingsText = "打开系统启动应用设置",
         RefreshingBatteryStatus = "正在刷新蓝牙设备电量...",
         RestoredSnapshotTitle = "暂无实时数据",
         RestoredSnapshotDescription = "当前显示上次成功刷新保存的缓存值，应用正在读取最新蓝牙设备状态。",
@@ -96,11 +106,21 @@ public static class AppStrings
     public static string FreshnessRefreshFailedCache => Current.FreshnessRefreshFailedCache;
     public static string FreshnessDisconnected => Current.FreshnessDisconnected;
     public static string FreshnessFallbackCache => Current.FreshnessFallbackCache;
-    public static string SettingsReservedStatus => Current.SettingsReservedStatus;
-    public static string SettingsReservedMessage => Current.SettingsReservedMessage;
+    public static string SettingsOpenedStatus => Current.SettingsOpenedStatus;
     public static string AboutOpenedStatus => Current.AboutOpenedStatus;
     public static string AboutCaption => Current.AboutCaption;
     public static string AboutMessage => Current.AboutMessage;
+    public static string SettingsTitle => Current.SettingsTitle;
+    public static string StartupSectionTitle => Current.StartupSectionTitle;
+    public static string StartupToggleHeader => Current.StartupToggleHeader;
+    public static string StartupToggleDescription => Current.StartupToggleDescription;
+    public static string StartupLoadingStatus => Current.StartupLoadingStatus;
+    public static string StartupEnabledStatus => Current.StartupEnabledStatus;
+    public static string StartupDisabledStatus => Current.StartupDisabledStatus;
+    public static string StartupDisabledByUserStatus => Current.StartupDisabledByUserStatus;
+    public static string StartupDisabledByPolicyStatus => Current.StartupDisabledByPolicyStatus;
+    public static string StartupUnknownStatus => Current.StartupUnknownStatus;
+    public static string OpenSystemStartupSettingsText => Current.OpenSystemStartupSettingsText;
     public static string RefreshingBatteryStatus => Current.RefreshingBatteryStatus;
     public static string RestoredSnapshotTitle => Current.RestoredSnapshotTitle;
     public static string RestoredSnapshotDescription => Current.RestoredSnapshotDescription;
@@ -183,11 +203,21 @@ public static class AppStrings
         public required string FreshnessRefreshFailedCache { get; init; }
         public required string FreshnessDisconnected { get; init; }
         public required string FreshnessFallbackCache { get; init; }
-        public required string SettingsReservedStatus { get; init; }
-        public required string SettingsReservedMessage { get; init; }
+        public required string SettingsOpenedStatus { get; init; }
         public required string AboutOpenedStatus { get; init; }
         public required string AboutCaption { get; init; }
         public required string AboutMessage { get; init; }
+        public required string SettingsTitle { get; init; }
+        public required string StartupSectionTitle { get; init; }
+        public required string StartupToggleHeader { get; init; }
+        public required string StartupToggleDescription { get; init; }
+        public required string StartupLoadingStatus { get; init; }
+        public required string StartupEnabledStatus { get; init; }
+        public required string StartupDisabledStatus { get; init; }
+        public required string StartupDisabledByUserStatus { get; init; }
+        public required string StartupDisabledByPolicyStatus { get; init; }
+        public required string StartupUnknownStatus { get; init; }
+        public required string OpenSystemStartupSettingsText { get; init; }
         public required string RefreshingBatteryStatus { get; init; }
         public required string RestoredSnapshotTitle { get; init; }
         public required string RestoredSnapshotDescription { get; init; }
