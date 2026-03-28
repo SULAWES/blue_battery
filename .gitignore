@@ -1,4 +1,6 @@
 dev_docs/
+local_signing/
+dist/
 
 # Local tool and IDE state
 .dotnet_home/

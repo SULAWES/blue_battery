@@ -11,7 +11,7 @@
   <Identity
     Name="17b3f282-00f0-4980-aa9a-f97263ca6df5"
     Publisher="CN=SULAW"
-    Version="1.0.0.0" />
+    Version="0.1.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="17b3f282-00f0-4980-aa9a-f97263ca6df5" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 

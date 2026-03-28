@@ -38,29 +38,23 @@ public sealed class PanelRefreshTextBuilder
         {
             if (missingDeviceCount > 0)
             {
-                return AppStrings.BuildStatusRefreshSuccessWithMissing(
-                    result.Devices.Count,
-                    missingDeviceCount,
-                    formattedTimestamp);
+                return $"{result.Devices.Count} 台设备 · {missingDeviceCount} 台已断开 · {formattedTimestamp}";
             }
 
-            return AppStrings.BuildStatusRefreshSuccess(
-                result.Devices.Count,
-                result.ConnectedLeDeviceCount,
-                formattedTimestamp);
+            return $"{result.Devices.Count} 台设备 · {formattedTimestamp}";
         }
 
         if (missingDeviceCount > 0)
         {
-            return AppStrings.BuildStatusOnlyMissing(missingDeviceCount, formattedTimestamp);
+            return $"{missingDeviceCount} 台设备已断开 · {formattedTimestamp}";
         }
 
         if (result.ConnectedLeDeviceCount > 0)
         {
-            return AppStrings.BuildStatusNoReadable(result.ConnectedLeDeviceCount, formattedTimestamp);
+            return $"无可读取设备 · {formattedTimestamp}";
         }
 
-        return AppStrings.BuildStatusNoConnected(formattedTimestamp);
+        return $"无已连接设备 · {formattedTimestamp}";
     }
 
     public string BuildTooltip(BluetoothRefreshResult result, int missingDeviceCount)
@@ -96,7 +90,8 @@ public sealed class PanelRefreshTextBuilder
 
     public string BuildAutoRefreshStatus(string reason)
     {
-        return AppStrings.BuildStatusAutoRefresh(reason);
+        string timestamp = DateTimeOffset.Now.ToLocalTime().ToString("HH:mm:ss");
+        return $"自动刷新 · {timestamp}";
     }
 }
 
