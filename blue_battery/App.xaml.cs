@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -6,22 +7,23 @@ using BlueBattery.Diagnostics;
 using BlueBattery.Models;
 using BlueBattery.Resources.Strings;
 using BlueBattery.Services.Bluetooth;
+using BlueBattery.Services.Presentation;
 using BlueBattery.Services.State;
 using BlueBattery.Services.Settings;
 using BlueBattery.Services.Tray;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
-using System.Collections.Generic;
 
 namespace BlueBattery;
 
 public partial class App : Application
 {
-    private const string DefaultTooltip = nameof(DefaultTooltip);
     private readonly IBluetoothDeviceDiscoveryService _bluetoothDeviceDiscoveryService = new BluetoothDeviceDiscoveryService();
     private readonly IBatteryTelemetryService _bluetoothBatteryTelemetryService = new BluetoothBatteryTelemetryService();
     private readonly IAppStateStore _appStateStore = new JsonAppStateStore();
+    private readonly DisplayedDeviceTracker _displayedDeviceTracker = new();
+    private readonly PanelRefreshTextBuilder _panelRefreshTextBuilder = new();
     private readonly IStartupLaunchService _startupLaunchService = new StartupLaunchService();
     private MainWindow? _hostWindow;
     private PanelWindow? _panelWindow;
@@ -34,7 +36,6 @@ public partial class App : Application
     private CancellationTokenSource? _autoRefreshDebounceCts;
     private DateTimeOffset? _lastSuccessfulRefreshUtc;
     private AppStateSnapshot? _restoredSnapshot;
-    private readonly Dictionary<string, DeviceBatteryInfo> _displayedDevices = new(StringComparer.Ordinal);
 
     public App()
     {
@@ -232,13 +233,14 @@ public partial class App : Application
         _panelWindow?.UpdateEmptyState(AppStrings.RestoredSnapshotTitle, AppStrings.RestoredSnapshotDescription);
         _panelWindow?.UpdateLastRefresh(_lastSuccessfulRefreshUtc);
         _panelWindow?.UpdateStatusMessage(AppStrings.RestoredSnapshotStatus);
-        _trayIconService?.UpdateTooltip(BuildTooltip(new BluetoothRefreshResult
+        BluetoothRefreshResult restoredResult = new()
         {
             Devices = staleDevices,
             ConnectedLeDeviceCount = staleDevices.Length,
-        }, missingDeviceCount: 0));
-        _trayIconService?.UpdateBatteryIcon(GetLowestBatteryPercent(staleDevices));
-        UpdateDisplayedDevices(staleDevices);
+        };
+        _trayIconService?.UpdateTooltip(_panelRefreshTextBuilder.BuildTooltip(restoredResult, missingDeviceCount: 0));
+        _trayIconService?.UpdateBatteryIcon(_panelRefreshTextBuilder.GetLowestBatteryPercent(staleDevices));
+        _displayedDeviceTracker.Track(staleDevices);
     }
 
     private async Task RefreshDevicesAsync(bool forceRefresh)
@@ -261,15 +263,14 @@ public partial class App : Application
         try
         {
             BluetoothRefreshResult result = await _bluetoothDeviceDiscoveryService.GetConnectedDevicesAsync();
-            int missingDeviceCount = CountMissingDevices(result.Devices);
-            IReadOnlyList<DeviceBatteryInfo> displayDevices = MergeWithMissingDevices(result.Devices);
+            int missingDeviceCount = _displayedDeviceTracker.CountMissingDevices(result.Devices);
+            IReadOnlyList<DeviceBatteryInfo> displayDevices = _displayedDeviceTracker.MergeWithDisconnectedSnapshots(result.Devices);
+            PanelEmptyState emptyState = _panelRefreshTextBuilder.BuildEmptyState(result, missingDeviceCount);
             _panelWindow?.SetDevices(displayDevices);
-            _panelWindow?.UpdateEmptyState(
-                BuildEmptyStateTitle(result, missingDeviceCount),
-                BuildEmptyStateDescription(result, missingDeviceCount));
-            _panelWindow?.UpdateStatusMessage(BuildStatusMessage(result, missingDeviceCount));
-            _trayIconService?.UpdateTooltip(BuildTooltip(result, missingDeviceCount));
-            _trayIconService?.UpdateBatteryIcon(GetLowestBatteryPercent(result.Devices));
+            _panelWindow?.UpdateEmptyState(emptyState.Title, emptyState.Description);
+            _panelWindow?.UpdateStatusMessage(_panelRefreshTextBuilder.BuildStatusMessage(result, missingDeviceCount));
+            _trayIconService?.UpdateTooltip(_panelRefreshTextBuilder.BuildTooltip(result, missingDeviceCount));
+            _trayIconService?.UpdateBatteryIcon(_panelRefreshTextBuilder.GetLowestBatteryPercent(result.Devices));
             await _bluetoothBatteryTelemetryService.UpdateTrackedDevicesAsync(result.Devices.Select(device => device.DeviceId));
             _lastSuccessfulRefreshUtc = DateTimeOffset.UtcNow;
             _panelWindow?.UpdateLastRefresh(_lastSuccessfulRefreshUtc);
@@ -280,7 +281,7 @@ public partial class App : Application
                 Devices = result.Devices.ToArray(),
             };
             await _appStateStore.SaveAsync(_restoredSnapshot);
-            UpdateDisplayedDevices(displayDevices);
+            _displayedDeviceTracker.Track(displayDevices);
             EnsureDiscoveryMonitoringStarted();
         }
         catch (Exception ex)
@@ -299,7 +300,7 @@ public partial class App : Application
                     AppStrings.RefreshFailedDescription);
                 _panelWindow?.UpdateStatusMessage(AppStrings.BuildStatusRefreshFailed(timestamp, ex.Message));
                 _trayIconService?.UpdateBatteryIcon(null);
-                _displayedDevices.Clear();
+                _displayedDeviceTracker.Clear();
             }
 
             _panelWindow?.UpdateLastRefresh(_lastSuccessfulRefreshUtc);
@@ -317,94 +318,6 @@ public partial class App : Application
         }
     }
 
-    private static string BuildStatusMessage(BluetoothRefreshResult result, int missingDeviceCount)
-    {
-        string timestamp = DateTime.Now.ToString("HH:mm:ss");
-
-        if (result.Devices.Count > 0)
-        {
-            if (missingDeviceCount > 0)
-            {
-            return AppStrings.BuildStatusRefreshSuccessWithMissing(result.Devices.Count, missingDeviceCount, timestamp);
-        }
-
-            return AppStrings.BuildStatusRefreshSuccess(result.Devices.Count, result.ConnectedLeDeviceCount, timestamp);
-        }
-
-        if (missingDeviceCount > 0)
-        {
-            return AppStrings.BuildStatusOnlyMissing(missingDeviceCount, timestamp);
-        }
-
-        if (result.ConnectedLeDeviceCount > 0)
-        {
-            return AppStrings.BuildStatusNoReadable(result.ConnectedLeDeviceCount, timestamp);
-        }
-
-        return AppStrings.BuildStatusNoConnected(timestamp);
-    }
-
-    private static string BuildTooltip(BluetoothRefreshResult result, int missingDeviceCount)
-    {
-        if (result.Devices.Count == 0)
-        {
-            if (missingDeviceCount > 0)
-            {
-                return AppStrings.TooltipDisconnected;
-            }
-
-            return result.ConnectedLeDeviceCount > 0
-                ? AppStrings.TooltipNoReadable
-                : AppStrings.AppTitle;
-        }
-
-        int lowestBattery = result.Devices
-            .Where(device => device.BatteryPercent.HasValue)
-            .Select(device => device.BatteryPercent!.Value)
-            .DefaultIfEmpty(0)
-            .Min();
-
-        return AppStrings.BuildTooltipSummary(result.Devices.Count, lowestBattery);
-    }
-
-    private static int? GetLowestBatteryPercent(System.Collections.Generic.IEnumerable<DeviceBatteryInfo> devices)
-    {
-        return devices
-            .Where(device => device.BatteryPercent.HasValue)
-            .Select(device => (int?)device.BatteryPercent!.Value)
-            .Min();
-    }
-
-    private static string BuildEmptyStateTitle(BluetoothRefreshResult result, int missingDeviceCount)
-    {
-        if (missingDeviceCount > 0)
-        {
-            return AppStrings.EmptyStateMissingTitle;
-        }
-
-        if (result.ConnectedLeDeviceCount == 0)
-        {
-            return AppStrings.EmptyStateNoConnectedTitle;
-        }
-
-        return AppStrings.EmptyStateNoReadableTitle;
-    }
-
-    private static string BuildEmptyStateDescription(BluetoothRefreshResult result, int missingDeviceCount)
-    {
-        if (missingDeviceCount > 0)
-        {
-            return AppStrings.BuildEmptyStateMissingDescription(missingDeviceCount);
-        }
-
-        if (result.ConnectedLeDeviceCount == 0)
-        {
-            return AppStrings.EmptyStateNoConnectedDescription;
-        }
-
-        return AppStrings.EmptyStateNoReadableDescription;
-    }
-
     private void NativeMessageBox(string message, string caption)
     {
         IntPtr owner = _panelWindow?.WindowHandle ?? _hostWindow?.WindowHandle ?? IntPtr.Zero;
@@ -419,6 +332,22 @@ public partial class App : Application
     {
         DispatcherQueue dispatcherQueue = _hostWindow?.DispatcherQueue ?? DispatcherQueue.GetForCurrentThread();
         dispatcherQueue.TryEnqueue(() => action());
+    }
+
+    private void EnqueueOnUiThread(Func<Task> asyncAction)
+    {
+        DispatcherQueue dispatcherQueue = _hostWindow?.DispatcherQueue ?? DispatcherQueue.GetForCurrentThread();
+        dispatcherQueue.TryEnqueue(async () =>
+        {
+            try
+            {
+                await asyncAction();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Unhandled exception in UI thread async operation: {ex}");
+            }
+        });
     }
 
     private void EnsureDiscoveryMonitoringStarted()
@@ -455,57 +384,8 @@ public partial class App : Application
         EnqueueOnUiThread(async () =>
         {
             EnsurePanelWindow();
-            _panelWindow?.UpdateStatusMessage(AppStrings.BuildStatusAutoRefresh(reason));
+            _panelWindow?.UpdateStatusMessage(_panelRefreshTextBuilder.BuildAutoRefreshStatus(reason));
             await RefreshDevicesAsync(forceRefresh: true);
         });
-    }
-
-    private int CountMissingDevices(IEnumerable<DeviceBatteryInfo> currentDevices)
-    {
-        if (_displayedDevices.Count == 0)
-        {
-            return 0;
-        }
-
-        HashSet<string> currentDeviceIds = currentDevices
-            .Select(device => device.DeviceId)
-            .Where(static deviceId => !string.IsNullOrWhiteSpace(deviceId))
-            .ToHashSet(StringComparer.Ordinal);
-
-        return _displayedDevices.Keys.Count(deviceId => !currentDeviceIds.Contains(deviceId));
-    }
-
-    private IReadOnlyList<DeviceBatteryInfo> MergeWithMissingDevices(IReadOnlyList<DeviceBatteryInfo> currentDevices)
-    {
-        if (_displayedDevices.Count == 0)
-        {
-            return currentDevices;
-        }
-
-        Dictionary<string, DeviceBatteryInfo> currentById = currentDevices
-            .Where(static device => !string.IsNullOrWhiteSpace(device.DeviceId))
-            .ToDictionary(device => device.DeviceId, StringComparer.Ordinal);
-
-        List<DeviceBatteryInfo> mergedDevices = [.. currentDevices];
-
-        foreach ((string deviceId, DeviceBatteryInfo previousDevice) in _displayedDevices)
-        {
-            if (!currentById.ContainsKey(deviceId))
-            {
-                mergedDevices.Add(previousDevice.ToDisconnectedSnapshot());
-            }
-        }
-
-        return mergedDevices;
-    }
-
-    private void UpdateDisplayedDevices(IEnumerable<DeviceBatteryInfo> devices)
-    {
-        _displayedDevices.Clear();
-
-        foreach (DeviceBatteryInfo device in devices.Where(static device => !string.IsNullOrWhiteSpace(device.DeviceId)))
-        {
-            _displayedDevices[device.DeviceId] = device;
-        }
     }
 }

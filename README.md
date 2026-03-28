@@ -41,8 +41,7 @@ blue_battery/
 │  ├─ Services/               蓝牙、托盘、状态持久化服务
 │  ├─ ViewModels/             面板视图模型
 │  └─ Views/                  面板窗口
-├─ dev_docs/                  过程文档与开发记录
-└─ .github/workflows/         基础 CI
+└─ dev_docs/                  过程文档与开发记录
 ```
 
 ## 开发计划
@@ -57,7 +56,7 @@ blue_battery/
 
 当前仍待完成：
 
-- 蓝牙编排边界继续收敛
+- 断连、失败和异常状态继续细化
 - 少量状态与交互细节补齐
 - 开源元数据和发布准备继续完善
 
