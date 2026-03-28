@@ -5,11 +5,13 @@
 ## [Unreleased]
 
 - 补充开源基础文件
+- 收敛应用编排并精简 README 中的对外 TODO
 - 实装设置界面与开机自启动
 - 补充已知限制与发布前检查说明
 - 完成 `Release x64` 构建验证
 - 修复状态持久化在修剪场景下的 JSON 警告
 - 修复 `Release MSIX` 打包所需的发布配置
+- 修复 `BluetoothBatteryTelemetryService.Dispose()` 的并发安全问题
 
 ## [0.1.0] - 2026-03-27
 

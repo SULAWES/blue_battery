@@ -71,17 +71,25 @@ public sealed class BluetoothBatteryTelemetryService : IBatteryTelemetryService
             return;
         }
 
-        _disposed = true;
-        _pollTimer?.Dispose();
-        _pollTimer = null;
-
-        foreach (SubscriptionContext subscription in _subscriptions.Values)
+        _syncLock.Wait();
+        try
         {
-            subscription.Dispose();
-        }
+            _disposed = true;
+            _pollTimer?.Dispose();
+            _pollTimer = null;
 
-        _subscriptions.Clear();
-        _syncLock.Dispose();
+            foreach (SubscriptionContext subscription in _subscriptions.Values)
+            {
+                subscription.Dispose();
+            }
+
+            _subscriptions.Clear();
+        }
+        finally
+        {
+            _syncLock.Release();
+            _syncLock.Dispose();
+        }
     }
 
     private async Task<SubscriptionContext> CreateSubscriptionContextAsync(string deviceId)
