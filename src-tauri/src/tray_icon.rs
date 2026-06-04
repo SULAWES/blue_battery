@@ -67,7 +67,7 @@ fn render_system_battery_glyph(percent: Option<u8>) -> Option<IconBitmap> {
             };
 
         let font = CreateFontW(
-            24,
+            28,
             0,
             0,
             0,
@@ -96,7 +96,7 @@ fn render_system_battery_glyph(percent: Option<u8>) -> Option<IconBitmap> {
             hdc,
             COLORREF(color.0 as u32 | ((color.1 as u32) << 8) | ((color.2 as u32) << 16)),
         );
-        let _ = TextOutW(hdc, 4, 4, &glyph);
+        let _ = TextOutW(hdc, 2, 2, &glyph);
 
         if !bits.is_null() {
             let dib = std::slice::from_raw_parts(bits as *const u8, pixels.len());
@@ -248,6 +248,28 @@ mod tests {
             .count()
     }
 
+    fn nontransparent_bounds(bitmap: &IconBitmap) -> Option<(u32, u32, u32, u32)> {
+        let mut min_x = bitmap.width;
+        let mut min_y = bitmap.height;
+        let mut max_x = 0;
+        let mut max_y = 0;
+        let mut found = false;
+
+        for y in 0..bitmap.height {
+            for x in 0..bitmap.width {
+                if pixel(bitmap, x, y).3 > 0 {
+                    found = true;
+                    min_x = min_x.min(x);
+                    min_y = min_y.min(y);
+                    max_x = max_x.max(x);
+                    max_y = max_y.max(y);
+                }
+            }
+        }
+
+        found.then_some((min_x, min_y, max_x, max_y))
+    }
+
     fn has_color(bitmap: &IconBitmap, Color(red, green, blue, _alpha): Color) -> bool {
         bitmap
             .pixels
@@ -268,6 +290,22 @@ mod tests {
         assert_eq!(bitmap.height, 32);
         assert!(nontransparent_pixels(&bitmap) > 20);
         assert_eq!(pixel(&bitmap, 1, 1).3, 0, "transparent background");
+    }
+
+    #[test]
+    fn renders_readable_tray_battery_scale() {
+        let bitmap = render_icon_bitmap(Some(48));
+        let (min_x, min_y, max_x, max_y) =
+            nontransparent_bounds(&bitmap).expect("visible tray icon");
+
+        assert!(
+            max_x - min_x + 1 >= 22,
+            "battery glyph should use most of the tray icon width, got x bounds {min_x}..{max_x}"
+        );
+        assert!(
+            max_y - min_y + 1 >= 12,
+            "battery glyph should stay readable after tray scaling, got y bounds {min_y}..{max_y}"
+        );
     }
 
     #[test]
