@@ -3,6 +3,7 @@ dist/
 target/
 src-tauri/target/
 src-tauri/gen/
+dev_docs/
 .vscode/
 .idea/
 *.log
