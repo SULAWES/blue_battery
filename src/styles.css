@@ -1,0 +1,278 @@
+:root {
+  font-family:
+    "Segoe UI Variable",
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+  color: #17202a;
+  background: transparent;
+  font-synthesis: none;
+  text-rendering: geometricPrecision;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 420px;
+  background: transparent;
+}
+
+button {
+  font: inherit;
+}
+
+.shell {
+  width: 100vw;
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  overflow: hidden;
+  background: #f7f9fb;
+  border: 1px solid rgba(45, 60, 75, 0.16);
+  box-shadow: 0 18px 44px rgba(17, 24, 39, 0.18);
+}
+
+.topbar {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid rgba(60, 76, 91, 0.12);
+  background: #ffffff;
+}
+
+.app-title {
+  font-size: 17px;
+  line-height: 22px;
+  font-weight: 650;
+}
+
+.summary {
+  margin-top: 4px;
+  max-width: 246px;
+  overflow: hidden;
+  color: #5c6975;
+  font-size: 12px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icon-button {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(49, 68, 85, 0.14);
+  border-radius: 8px;
+  color: #17202a;
+  background: #f4f7fa;
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  background: #edf3f8;
+}
+
+.icon-button:active {
+  transform: translateY(1px);
+}
+
+.refresh-glyph {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #365f8f;
+  border-right-color: transparent;
+  border-radius: 50%;
+  position: relative;
+}
+
+.refresh-glyph::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  position: absolute;
+  top: -3px;
+  right: -1px;
+  border-top: 2px solid #365f8f;
+  border-right: 2px solid #365f8f;
+  transform: rotate(22deg);
+}
+
+.icon-button.is-loading .refresh-glyph {
+  animation: spin 0.9s linear infinite;
+}
+
+.content {
+  min-height: 0;
+  padding: 10px;
+  overflow: auto;
+}
+
+.device-list {
+  display: grid;
+  gap: 8px;
+}
+
+.device-row {
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px;
+  border: 1px solid rgba(64, 81, 96, 0.11);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.device-icon {
+  width: 24px;
+  height: 30px;
+  justify-self: center;
+  align-self: center;
+  position: relative;
+  border: 2px solid #4f5f6c;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.device-icon::before {
+  content: "";
+  width: 8px;
+  height: 3px;
+  position: absolute;
+  top: -5px;
+  left: 6px;
+  border-radius: 2px 2px 0 0;
+  background: #4f5f6c;
+}
+
+.device-icon-fill {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  left: 2px;
+  border-radius: 2px;
+  background: #168b5b;
+}
+
+.device-icon[data-level="mid"] .device-icon-fill {
+  background: #d78212;
+}
+
+.device-icon[data-level="low"] .device-icon-fill {
+  background: #c83e3a;
+}
+
+.device-main {
+  min-width: 0;
+}
+
+.device-name {
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 19px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.device-meta {
+  margin-top: 3px;
+  color: #65727d;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.battery-stack {
+  width: 76px;
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+}
+
+.battery-number {
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: 650;
+}
+
+.battery-bar {
+  width: 72px;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #e4e9ee;
+}
+
+.battery-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: #168b5b;
+}
+
+.battery-bar-fill[data-level="mid"] {
+  background: #d78212;
+}
+
+.battery-bar-fill[data-level="low"] {
+  background: #c83e3a;
+}
+
+.empty {
+  display: grid;
+  align-content: center;
+  min-height: 220px;
+  padding: 24px;
+  border: 1px solid rgba(64, 81, 96, 0.11);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.empty-title {
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 650;
+}
+
+.empty-detail {
+  margin-top: 8px;
+  color: #65727d;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.warning-list {
+  margin-top: 8px;
+  display: grid;
+  gap: 6px;
+  color: #8a4d11;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.footer {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px;
+  color: #65727d;
+  font-size: 12px;
+  border-top: 1px solid rgba(60, 76, 91, 0.12);
+  background: #ffffff;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
