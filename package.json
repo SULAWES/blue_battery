@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 1420",
     "build": "tsc && vite build",
-    "test:panel": "node --experimental-strip-types --test tests/panel_state.test.ts",
+    "test:panel": "node --experimental-strip-types --test tests/*.test.ts",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
