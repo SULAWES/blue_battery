@@ -141,6 +141,10 @@ fn apply_refresh_result(app: &AppHandle, result: &RefreshResult) -> Result<(), S
 
 fn build_tooltip(result: &RefreshResult) -> String {
     if result.devices.is_empty() {
+        if !result.errors.is_empty() {
+            return "Blue Battery: 读取失败，稍后重试".to_string();
+        }
+
         return if result.connected_le_device_count == 0 {
             "Blue Battery: 没有已连接 BLE 设备".to_string()
         } else {
@@ -159,4 +163,71 @@ fn build_tooltip(result: &RefreshResult) -> String {
         .join(" · ");
 
     format!("Blue Battery: {summary}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn refresh_result(
+        devices: Vec<bluetooth::DeviceBatteryInfo>,
+        connected_le_device_count: u32,
+        errors: Vec<String>,
+    ) -> RefreshResult {
+        RefreshResult {
+            devices,
+            connected_le_device_count,
+            refreshed_at_ms: 123,
+            errors,
+        }
+    }
+
+    fn device(display_name: &str, battery_percent: u8) -> bluetooth::DeviceBatteryInfo {
+        bluetooth::DeviceBatteryInfo {
+            device_id: format!("id-{display_name}"),
+            display_name: display_name.to_string(),
+            battery_percent,
+            connection_state: "已连接".to_string(),
+            source_kind: "GATT BAS".to_string(),
+            updated_at_ms: 123,
+        }
+    }
+
+    #[test]
+    fn build_tooltip_reports_no_connected_devices() {
+        let result = refresh_result(Vec::new(), 0, Vec::new());
+
+        assert_eq!(build_tooltip(&result), "Blue Battery: 没有已连接 BLE 设备");
+    }
+
+    #[test]
+    fn build_tooltip_reports_connected_devices_without_standard_battery() {
+        let result = refresh_result(Vec::new(), 2, Vec::new());
+
+        assert_eq!(
+            build_tooltip(&result),
+            "Blue Battery: 2 个已连接 BLE 设备，没有标准电量"
+        );
+    }
+
+    #[test]
+    fn build_tooltip_reports_device_battery_summary() {
+        let result = refresh_result(vec![device("Keychron Z6 Ultra 8K", 48)], 1, Vec::new());
+
+        assert_eq!(
+            build_tooltip(&result),
+            "Blue Battery: Keychron Z6 Ultra 8K: 48%"
+        );
+    }
+
+    #[test]
+    fn build_tooltip_reports_read_errors_when_no_devices_are_displayable() {
+        let result = refresh_result(
+            Vec::new(),
+            1,
+            vec!["Keyboard: HRESULT 0x80070490".to_string()],
+        );
+
+        assert_eq!(build_tooltip(&result), "Blue Battery: 读取失败，稍后重试");
+    }
 }
