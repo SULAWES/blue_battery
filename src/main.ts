@@ -1,22 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import {
+  describePanelState,
+  type DeviceBatteryInfo,
+  type PanelState,
+  type RefreshResult,
+} from "./panel_state.ts";
 import "./styles.css";
-
-type DeviceBatteryInfo = {
-  device_id: string;
-  display_name: string;
-  battery_percent: number;
-  connection_state: string;
-  source_kind: string;
-  updated_at_ms: number;
-};
-
-type RefreshResult = {
-  devices: DeviceBatteryInfo[];
-  connected_le_device_count: number;
-  refreshed_at_ms: number;
-  errors: string[];
-};
 
 const app = document.querySelector<HTMLDivElement>("#app");
 
@@ -75,6 +65,9 @@ async function refreshDevices() {
 
   refreshing = true;
   refreshButton.classList.add("is-loading");
+  if (!lastResult) {
+    renderMessageState(describePanelState(null, true));
+  }
 
   try {
     const result = await invoke<RefreshResult>("refresh_devices");
@@ -90,36 +83,45 @@ async function refreshDevices() {
 
 function render(result: RefreshResult) {
   const devices = result.devices;
+  const state = describePanelState(result, false);
+  summaryEl.textContent = state.summary;
 
-  if (devices.length === 0) {
-    summaryEl.textContent = result.connected_le_device_count > 0
-      ? "已连接设备未暴露标准电量"
-      : "没有已连接 BLE 设备";
-
-    contentEl.innerHTML = `
-      <div class="empty">
-        <div class="empty-title">暂无可显示电量</div>
-        <div class="empty-detail">${escapeHtml(buildEmptyDetail(result))}</div>
-      </div>
-      ${renderErrors(result.errors)}
-    `;
-  } else {
-    const lowest = Math.min(...devices.map((device) => device.battery_percent));
-    const lowestDevice = devices.find((device) => device.battery_percent === lowest);
-    summaryEl.textContent = lowestDevice
-      ? `${lowestDevice.display_name} ${lowest}%`
-      : `${lowest}%`;
-
+  if (state.kind === "devices") {
     contentEl.innerHTML = `
       <div class="device-list">
         ${devices.map(renderDevice).join("")}
       </div>
       ${renderErrors(result.errors)}
     `;
+  } else {
+    contentEl.innerHTML = `
+      ${renderMessageStateHtml(state)}
+      ${renderErrors(result.errors)}
+    `;
   }
 
   timestampEl.textContent = formatTime(result.refreshed_at_ms);
   connectedCountEl.textContent = `${result.connected_le_device_count} 个已连接 BLE 设备`;
+}
+
+function renderMessageState(state: PanelState) {
+  summaryEl.textContent = state.summary;
+  contentEl.innerHTML = renderMessageStateHtml(state);
+  timestampEl.textContent = "--";
+  connectedCountEl.textContent = "0 个已连接 BLE 设备";
+}
+
+function renderMessageStateHtml(state: PanelState) {
+  if (state.kind === "devices") {
+    return "";
+  }
+
+  return `
+    <div class="empty" data-state="${state.kind}">
+      <div class="empty-title">${escapeHtml(state.title)}</div>
+      <div class="empty-detail">${escapeHtml(state.detail)}</div>
+    </div>
+  `;
 }
 
 function renderDevice(device: DeviceBatteryInfo) {
@@ -171,14 +173,6 @@ function renderErrors(errors: string[]) {
       ${errors.map((error) => `<div>${escapeHtml(error)}</div>`).join("")}
     </div>
   `;
-}
-
-function buildEmptyDetail(result: RefreshResult) {
-  if (result.connected_le_device_count === 0) {
-    return "连接支持标准 GATT Battery Service 的 BLE 设备后会自动刷新。";
-  }
-
-  return "当前连接设备没有返回标准 Battery Level characteristic。";
 }
 
 function formatTime(ms: number) {
