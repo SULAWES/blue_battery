@@ -2,8 +2,10 @@ node_modules/
 dist/
 target/
 src-tauri/target/
+src-tauri/target-*/
 src-tauri/gen/
 dev_docs/
+probe_output/
 .vscode/
 .idea/
 *.log

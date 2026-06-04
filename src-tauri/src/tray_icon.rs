@@ -2,6 +2,10 @@ use tauri::image::Image;
 
 const WIDTH: u32 = 32;
 const HEIGHT: u32 = 32;
+const BATMETER_BITMAP_RESOURCE: u16 = 358;
+const BATMETER_LEVEL_MAX_FRAME: usize = 9;
+const BATMETER_OUTLINE_FRAME: usize = 26;
+const RT_BITMAP: u16 = 2;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct Color(u8, u8, u8, u8);
@@ -18,7 +22,186 @@ pub fn render_battery_icon(percent: Option<u8>) -> Image<'static> {
 }
 
 fn render_icon_bitmap(percent: Option<u8>) -> IconBitmap {
-    render_tray_battery_icon(percent)
+    percent
+        .and_then(render_system_batmeter_icon)
+        .unwrap_or_else(|| render_tray_battery_icon(percent))
+}
+
+#[cfg(windows)]
+fn render_system_batmeter_icon(percent: u8) -> Option<IconBitmap> {
+    let strip = load_batmeter_strip()?;
+    render_batmeter_frame(&strip, percent)
+}
+
+#[cfg(not(windows))]
+fn render_system_batmeter_icon(_percent: u8) -> Option<IconBitmap> {
+    None
+}
+
+fn batmeter_level_frame(percent: Option<u8>) -> usize {
+    let Some(percent) = percent else {
+        return BATMETER_OUTLINE_FRAME;
+    };
+
+    ((percent.min(100) as usize * BATMETER_LEVEL_MAX_FRAME) + 50) / 100
+}
+
+#[derive(Debug)]
+struct BatmeterStrip {
+    pixels: Vec<Color>,
+    width: u32,
+    height: u32,
+}
+
+fn render_batmeter_frame(strip: &BatmeterStrip, percent: u8) -> Option<IconBitmap> {
+    if strip.height != HEIGHT || strip.width < WIDTH * (BATMETER_OUTLINE_FRAME as u32 + 1) {
+        return None;
+    }
+
+    let mut pixels = vec![0; (WIDTH * HEIGHT * 4) as usize];
+    let level_frame = batmeter_level_frame(Some(percent));
+    let fill = level_color(percent);
+    let stroke = Color(24, 24, 24, 255);
+
+    for y in 0..HEIGHT {
+        for x in 0..WIDTH {
+            let outline = batmeter_light_pixel(strip, BATMETER_OUTLINE_FRAME, x, y)?;
+            let level = batmeter_light_pixel(strip, level_frame, x, y)?;
+
+            if outline {
+                set_pixel(&mut pixels, x, y, stroke);
+            } else if level {
+                set_pixel(&mut pixels, x, y, fill);
+            }
+        }
+    }
+
+    Some(IconBitmap {
+        pixels,
+        width: WIDTH,
+        height: HEIGHT,
+    })
+}
+
+fn batmeter_light_pixel(strip: &BatmeterStrip, frame: usize, x: u32, y: u32) -> Option<bool> {
+    let source_x = frame as u32 * WIDTH + x;
+    let index = (y * strip.width + source_x) as usize;
+    let Color(red, green, blue, _) = *strip.pixels.get(index)?;
+
+    Some(red > 220 && green > 220 && blue > 220)
+}
+
+#[cfg(windows)]
+fn load_batmeter_strip() -> Option<BatmeterStrip> {
+    use std::{env, path::PathBuf};
+    use windows::{
+        Win32::{
+            Foundation::FreeLibrary,
+            System::LibraryLoader::{
+                FindResourceW, LOAD_LIBRARY_AS_DATAFILE, LoadLibraryExW, LoadResource,
+                LockResource, SizeofResource,
+            },
+        },
+        core::PCWSTR,
+    };
+
+    let windir = env::var_os("WINDIR").map(PathBuf::from)?;
+    let resource_path = windir.join("SystemResources").join("batmeter.dll.mun");
+    let resource_path = wide_null(resource_path.to_string_lossy().as_ref());
+
+    unsafe {
+        let module = LoadLibraryExW(
+            PCWSTR(resource_path.as_ptr()),
+            None,
+            LOAD_LIBRARY_AS_DATAFILE,
+        )
+        .ok()?;
+        let resource = FindResourceW(
+            Some(module),
+            int_resource(BATMETER_BITMAP_RESOURCE),
+            int_resource(RT_BITMAP),
+        );
+
+        let strip = if resource.is_invalid() {
+            None
+        } else {
+            match LoadResource(Some(module), resource) {
+                Ok(loaded) => {
+                    let data = LockResource(loaded);
+                    let size = SizeofResource(Some(module), resource) as usize;
+
+                    if data.is_null() || size == 0 {
+                        None
+                    } else {
+                        let bytes = std::slice::from_raw_parts(data as *const u8, size);
+                        parse_batmeter_dib(bytes)
+                    }
+                }
+                Err(_) => None,
+            }
+        };
+
+        let _ = FreeLibrary(module);
+        strip
+    }
+}
+
+#[cfg(windows)]
+fn int_resource(value: u16) -> windows::core::PCWSTR {
+    windows::core::PCWSTR(value as usize as *const u16)
+}
+
+#[cfg(windows)]
+fn wide_null(value: &str) -> Vec<u16> {
+    value.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
+fn parse_batmeter_dib(bytes: &[u8]) -> Option<BatmeterStrip> {
+    if bytes.len() < 40 {
+        return None;
+    }
+
+    let header_size = u32::from_le_bytes(bytes.get(0..4)?.try_into().ok()?);
+    let width = i32::from_le_bytes(bytes.get(4..8)?.try_into().ok()?);
+    let height = i32::from_le_bytes(bytes.get(8..12)?.try_into().ok()?);
+    let bit_count = u16::from_le_bytes(bytes.get(14..16)?.try_into().ok()?);
+    let compression = u32::from_le_bytes(bytes.get(16..20)?.try_into().ok()?);
+
+    if header_size < 40 || width <= 0 || height == 0 || bit_count != 32 || compression != 0 {
+        return None;
+    }
+
+    let width = width as u32;
+    let height_abs = height.unsigned_abs();
+    let row_stride = width.checked_mul(4)?;
+    let pixel_offset = header_size as usize;
+    let expected_size = pixel_offset.checked_add(row_stride.checked_mul(height_abs)? as usize)?;
+
+    if bytes.len() < expected_size {
+        return None;
+    }
+
+    let mut pixels = Vec::with_capacity((width * height_abs) as usize);
+    for y in 0..height_abs {
+        let source_y = if height > 0 { height_abs - 1 - y } else { y };
+        let row = pixel_offset + (source_y * row_stride) as usize;
+
+        for x in 0..width {
+            let index = row + (x * 4) as usize;
+            pixels.push(Color(
+                bytes[index + 2],
+                bytes[index + 1],
+                bytes[index],
+                bytes[index + 3],
+            ));
+        }
+    }
+
+    Some(BatmeterStrip {
+        pixels,
+        width,
+        height: height_abs,
+    })
 }
 
 fn render_tray_battery_icon(percent: Option<u8>) -> IconBitmap {
@@ -167,6 +350,26 @@ mod tests {
             nontransparent_pixels(&bitmap) >= 140,
             "battery icon should have enough visible mass for the notification area"
         );
+    }
+
+    #[test]
+    fn maps_battery_percent_to_batmeter_frame() {
+        assert_eq!(batmeter_level_frame(Some(100)), 9);
+        assert_eq!(batmeter_level_frame(Some(48)), 4);
+        assert_eq!(batmeter_level_frame(Some(0)), 0);
+        assert_eq!(batmeter_level_frame(None), BATMETER_OUTLINE_FRAME);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn renders_system_batmeter_icon_when_available() {
+        let bitmap = render_system_batmeter_icon(48).expect("batmeter resource icon");
+
+        assert_eq!(bitmap.width, 32);
+        assert_eq!(bitmap.height, 32);
+        assert_eq!(pixel(&bitmap, 0, 0).3, 0, "transparent background");
+        assert!(has_color(&bitmap, Color(24, 24, 24, 255)));
+        assert!(has_color(&bitmap, Color(16, 124, 16, 255)));
     }
 
     #[test]
