@@ -1,4 +1,13 @@
 use tauri::image::Image;
+use windows::Win32::{
+    Foundation::COLORREF,
+    Graphics::Gdi::{
+        ANTIALIASED_QUALITY, BI_RGB, BITMAPINFO, BITMAPINFOHEADER, CLIP_DEFAULT_PRECIS,
+        CreateCompatibleDC, CreateDIBSection, CreateFontW, DEFAULT_CHARSET, DEFAULT_PITCH,
+        DIB_RGB_COLORS, DeleteDC, DeleteObject, FF_DONTCARE, FW_NORMAL, HGDIOBJ, OUT_TT_PRECIS,
+        SelectObject, SetBkMode, SetTextColor, TRANSPARENT, TextOutW,
+    },
+};
 
 const WIDTH: u32 = 32;
 const HEIGHT: u32 = 32;
@@ -18,6 +27,114 @@ pub fn render_battery_icon(percent: Option<u8>) -> Image<'static> {
 }
 
 fn render_icon_bitmap(percent: Option<u8>) -> IconBitmap {
+    render_system_battery_glyph(percent).unwrap_or_else(|| render_fallback_battery_icon(percent))
+}
+
+fn render_system_battery_glyph(percent: Option<u8>) -> Option<IconBitmap> {
+    let color = percent.map(level_color).unwrap_or(Color(96, 96, 96, 255));
+    let glyph = [battery_glyph_codepoint(percent)];
+    let mut pixels = vec![0; (WIDTH * HEIGHT * 4) as usize];
+    let mut bits = std::ptr::null_mut();
+    let bitmap_info = BITMAPINFO {
+        bmiHeader: BITMAPINFOHEADER {
+            biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+            biWidth: WIDTH as i32,
+            biHeight: -(HEIGHT as i32),
+            biPlanes: 1,
+            biBitCount: 32,
+            biCompression: BI_RGB.0,
+            biSizeImage: WIDTH * HEIGHT * 4,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+
+    let face_name = wide_null("Segoe Fluent Icons");
+
+    unsafe {
+        let hdc = CreateCompatibleDC(None);
+        if hdc.is_invalid() {
+            return None;
+        }
+
+        let bitmap =
+            match CreateDIBSection(Some(hdc), &bitmap_info, DIB_RGB_COLORS, &mut bits, None, 0) {
+                Ok(bitmap) => bitmap,
+                Err(_) => {
+                    let _ = DeleteDC(hdc);
+                    return None;
+                }
+            };
+
+        let font = CreateFontW(
+            24,
+            0,
+            0,
+            0,
+            FW_NORMAL.0 as i32,
+            0,
+            0,
+            0,
+            DEFAULT_CHARSET,
+            OUT_TT_PRECIS,
+            CLIP_DEFAULT_PRECIS,
+            ANTIALIASED_QUALITY,
+            DEFAULT_PITCH.0 as u32 | FF_DONTCARE.0 as u32,
+            windows::core::PCWSTR(face_name.as_ptr()),
+        );
+
+        if font.is_invalid() {
+            let _ = DeleteObject(HGDIOBJ(bitmap.0));
+            let _ = DeleteDC(hdc);
+            return None;
+        }
+
+        let old_bitmap = SelectObject(hdc, HGDIOBJ(bitmap.0));
+        let old_font = SelectObject(hdc, HGDIOBJ(font.0));
+        let _ = SetBkMode(hdc, TRANSPARENT);
+        let _ = SetTextColor(
+            hdc,
+            COLORREF(color.0 as u32 | ((color.1 as u32) << 8) | ((color.2 as u32) << 16)),
+        );
+        let _ = TextOutW(hdc, 4, 4, &glyph);
+
+        if !bits.is_null() {
+            let dib = std::slice::from_raw_parts(bits as *const u8, pixels.len());
+            for (source, target) in dib.chunks_exact(4).zip(pixels.chunks_exact_mut(4)) {
+                let blue = source[0];
+                let green = source[1];
+                let red = source[2];
+                let alpha = if red == 0 && green == 0 && blue == 0 {
+                    0
+                } else {
+                    255
+                };
+                target[0] = red;
+                target[1] = green;
+                target[2] = blue;
+                target[3] = alpha;
+            }
+        }
+
+        let _ = SelectObject(hdc, old_font);
+        let _ = SelectObject(hdc, old_bitmap);
+        let _ = DeleteObject(HGDIOBJ(font.0));
+        let _ = DeleteObject(HGDIOBJ(bitmap.0));
+        let _ = DeleteDC(hdc);
+    }
+
+    if pixels.iter().any(|channel| *channel != 0) {
+        Some(IconBitmap {
+            pixels,
+            width: WIDTH,
+            height: HEIGHT,
+        })
+    } else {
+        None
+    }
+}
+
+fn render_fallback_battery_icon(percent: Option<u8>) -> IconBitmap {
     let mut pixels = vec![0; (WIDTH * HEIGHT * 4) as usize];
     let stroke = Color(32, 32, 32, 255);
     let halo = Color(255, 255, 255, 210);
@@ -44,6 +161,10 @@ fn render_icon_bitmap(percent: Option<u8>) -> IconBitmap {
     }
 }
 
+fn wide_null(value: &str) -> Vec<u16> {
+    value.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
 fn level_color(percent: u8) -> Color {
     if percent <= 20 {
         Color(196, 43, 28, 255)
@@ -51,6 +172,19 @@ fn level_color(percent: u8) -> Color {
         Color(202, 80, 16, 255)
     } else {
         Color(16, 124, 16, 255)
+    }
+}
+
+fn battery_glyph_codepoint(percent: Option<u8>) -> u16 {
+    let Some(percent) = percent else {
+        return 0xe83f;
+    };
+
+    let bucket = ((percent.min(100) as u16) + 5) / 10;
+    if bucket >= 10 {
+        0xe83f
+    } else {
+        0xe850 + bucket
     }
 }
 
@@ -106,30 +240,55 @@ mod tests {
         )
     }
 
+    fn nontransparent_pixels(bitmap: &IconBitmap) -> usize {
+        bitmap
+            .pixels
+            .chunks_exact(4)
+            .filter(|pixel| pixel[3] > 0)
+            .count()
+    }
+
+    fn has_color(bitmap: &IconBitmap, Color(red, green, blue, _alpha): Color) -> bool {
+        bitmap
+            .pixels
+            .chunks_exact(4)
+            .any(|pixel| pixel[0] == red && pixel[1] == green && pixel[2] == blue && pixel[3] > 0)
+    }
+
     #[test]
-    fn renders_windows_power_icon_silhouette() {
+    fn renders_system_battery_glyph_when_available() {
+        assert!(render_system_battery_glyph(Some(48)).is_some());
+    }
+
+    #[test]
+    fn renders_transparent_tray_bitmap_with_visible_battery_shape() {
         let bitmap = render_icon_bitmap(Some(48));
 
         assert_eq!(bitmap.width, 32);
         assert_eq!(bitmap.height, 32);
-        assert!(pixel(&bitmap, 6, 14).3 > 200, "left battery outline");
-        assert!(pixel(&bitmap, 25, 15).3 > 200, "right battery terminal");
-        assert!(pixel(&bitmap, 28, 9).3 > 200, "plug stem");
+        assert!(nontransparent_pixels(&bitmap) > 20);
         assert_eq!(pixel(&bitmap, 1, 1).3, 0, "transparent background");
     }
 
     #[test]
-    fn battery_fill_tracks_percent_without_overfilling() {
+    fn battery_glyph_uses_level_color() {
         let bitmap = render_icon_bitmap(Some(48));
 
-        assert_eq!(pixel(&bitmap, 10, 15), Color(16, 124, 16, 255));
-        assert_ne!(pixel(&bitmap, 21, 15), Color(16, 124, 16, 255));
+        assert!(has_color(&bitmap, Color(16, 124, 16, 255)));
     }
 
     #[test]
-    fn unknown_battery_uses_muted_center_dash() {
+    fn unknown_battery_uses_muted_color() {
         let bitmap = render_icon_bitmap(None);
 
-        assert_eq!(pixel(&bitmap, 15, 16), Color(96, 96, 96, 255));
+        assert!(has_color(&bitmap, Color(96, 96, 96, 255)));
+    }
+
+    #[test]
+    fn maps_percent_to_segoe_fluent_battery_glyphs() {
+        assert_eq!(battery_glyph_codepoint(None), 0xe83f);
+        assert_eq!(battery_glyph_codepoint(Some(0)), 0xe850);
+        assert_eq!(battery_glyph_codepoint(Some(48)), 0xe855);
+        assert_eq!(battery_glyph_codepoint(Some(99)), 0xe83f);
     }
 }

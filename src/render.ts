@@ -78,13 +78,11 @@ function renderMessageStateHtml(state: PanelState) {
 
 function renderDevice(device: DeviceBatteryInfo) {
   const percent = Math.max(0, Math.min(100, device.battery_percent));
-  const level = percent <= 20 ? "low" : percent <= 50 ? "mid" : "high";
+  const level = percent <= 20 ? "low" : percent <= 35 ? "mid" : "high";
 
   return `
     <article class="device-row">
-      <div class="device-icon" data-level="${level}" aria-hidden="true">
-        <div class="device-icon-fill" style="height: ${percent}%"></div>
-      </div>
+      <span class="fluent-icon device-symbol" data-level="${level}" aria-hidden="true">&#xE83F;</span>
       <div class="device-main">
         <div class="device-name">${escapeHtml(device.display_name)}</div>
         <div class="device-meta">${escapeHtml(device.connection_state)} · ${escapeHtml(device.source_kind)}</div>

@@ -26,7 +26,7 @@ app.innerHTML = `
         <div id="summary" class="summary">正在读取</div>
       </div>
       <button id="refresh" class="icon-button" type="button" title="刷新" aria-label="刷新">
-        <span class="refresh-glyph" aria-hidden="true"></span>
+        <span class="fluent-icon refresh-glyph" aria-hidden="true">&#xE72C;</span>
       </button>
     </header>
 

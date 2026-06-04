@@ -34,6 +34,8 @@ test("builds a panel view for a displayable device", () => {
   assert.equal(view.summary, "Keychron Z6 Ultra 8K 48%");
   assert.match(view.contentHtml, /class="device-list"/);
   assert.match(view.contentHtml, /Keychron Z6 Ultra 8K/);
+  assert.match(view.contentHtml, /class="fluent-icon device-symbol"/);
+  assert.match(view.contentHtml, /&#xE83F;/);
   assert.equal(view.connectedCount, "1 个已连接 BLE 设备");
 });
 
