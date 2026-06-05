@@ -17,6 +17,7 @@ if (!app) {
 
 let lastResult: RefreshResult | null = null;
 let refreshing = false;
+let startupEnabled = false;
 
 app.innerHTML = `
   <main class="shell">
@@ -54,6 +55,10 @@ app.innerHTML = `
           <span class="fluent-icon settings-glyph" aria-hidden="true">&#xE713;</span>
         </button>
         <div id="settings-menu" class="settings-menu" role="menu" hidden>
+          <button id="menu-startup" class="menu-item" type="button" role="menuitemcheckbox" aria-checked="false">
+            <span class="fluent-icon menu-check-glyph" aria-hidden="true">&#xE73E;</span>
+            <span>开机自启动</span>
+          </button>
           <button id="menu-refresh" class="menu-item" type="button" role="menuitem">
             <span class="fluent-icon menu-refresh-glyph" aria-hidden="true">&#xE72C;</span>
             <span>刷新</span>
@@ -74,6 +79,7 @@ const connectedBadgeEl = document.querySelector<HTMLDivElement>("#connected-badg
 const footerStatusEl = document.querySelector<HTMLSpanElement>("#footer-status")!;
 const settingsButton = document.querySelector<HTMLButtonElement>("#settings")!;
 const settingsMenu = document.querySelector<HTMLDivElement>("#settings-menu")!;
+const startupMenuItem = document.querySelector<HTMLButtonElement>("#menu-startup")!;
 const refreshMenuItem = document.querySelector<HTMLButtonElement>("#menu-refresh")!;
 const diagnosticsMenuItem = document.querySelector<HTMLButtonElement>("#menu-diagnostics")!;
 const diagnosticsPanel = document.querySelector<HTMLElement>("#diagnostics-panel")!;
@@ -83,6 +89,7 @@ const diagnosticsCloseButton = document.querySelector<HTMLButtonElement>("#diagn
 settingsButton.addEventListener("click", (event) => {
   event.stopPropagation();
   setSettingsMenuOpen(settingsMenu.hidden === true);
+  void refreshStartupState();
 });
 
 settingsMenu.addEventListener("click", (event) => {
@@ -92,6 +99,10 @@ settingsMenu.addEventListener("click", (event) => {
 refreshMenuItem.addEventListener("click", () => {
   setSettingsMenuOpen(false);
   void refreshDevices();
+});
+
+startupMenuItem.addEventListener("click", () => {
+  void setStartupEnabled(!startupEnabled);
 });
 
 diagnosticsMenuItem.addEventListener("click", () => {
@@ -120,6 +131,7 @@ void listen<RefreshResult>("devices-refreshed", (event) => {
 });
 
 void refreshDevices();
+void refreshStartupState();
 window.setInterval(() => {
   void refreshDevices();
 }, 60_000);
@@ -165,6 +177,32 @@ function applyPanelView(view: PanelView) {
 function setSettingsMenuOpen(open: boolean) {
   settingsMenu.hidden = !open;
   settingsButton.setAttribute("aria-expanded", String(open));
+}
+
+async function refreshStartupState() {
+  try {
+    setStartupState(await invoke<boolean>("get_startup_enabled"));
+  } catch {
+    setStartupState(false);
+  }
+}
+
+async function setStartupEnabled(enabled: boolean) {
+  startupMenuItem.disabled = true;
+
+  try {
+    setStartupState(await invoke<boolean>("set_startup_enabled", { enabled }));
+    footerStatusEl.textContent = startupEnabled ? "已启用开机自启动" : "已关闭开机自启动";
+  } catch {
+    footerStatusEl.textContent = "更新开机自启动失败";
+  } finally {
+    startupMenuItem.disabled = false;
+  }
+}
+
+function setStartupState(enabled: boolean) {
+  startupEnabled = enabled;
+  startupMenuItem.setAttribute("aria-checked", String(enabled));
 }
 
 async function showDiagnostics() {

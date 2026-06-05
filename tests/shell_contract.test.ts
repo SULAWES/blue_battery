@@ -21,3 +21,10 @@ test("exposes diagnostics from the settings menu", () => {
   assert.match(source, /id="diagnostics-panel"/);
   assert.match(source, /get_diagnostics_report/);
 });
+
+test("exposes startup toggle from the settings menu", () => {
+  assert.match(source, /id="menu-startup"/);
+  assert.match(source, /role="menuitemcheckbox"/);
+  assert.match(source, /get_startup_enabled/);
+  assert.match(source, /set_startup_enabled/);
+});

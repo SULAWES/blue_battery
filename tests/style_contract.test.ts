@@ -75,3 +75,11 @@ test("uses a compact diagnostics flyout inside the panel", () => {
   assert.match(block(".diagnostics-panel"), /bottom:\s*42px/);
   assert.match(block(".diagnostics-report"), /font-family:\s*Consolas/);
 });
+
+test("uses a compact startup checkbox menu item", () => {
+  assert.match(block(".menu-check-glyph"), /font-size:\s*14px/);
+  assert.match(
+    css,
+    /\.menu-item\[aria-checked="false"\]\s+\.menu-check-glyph\s*\{[^}]*opacity:\s*0/s,
+  );
+});

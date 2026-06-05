@@ -145,6 +145,15 @@ button {
   font-size: 14px;
 }
 
+.menu-check-glyph {
+  color: var(--win-icon);
+  font-size: 14px;
+}
+
+.menu-item[aria-checked="false"] .menu-check-glyph {
+  opacity: 0;
+}
+
 .content {
   min-height: 0;
   padding: 16px 8px 8px;

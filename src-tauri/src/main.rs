@@ -15,6 +15,7 @@ use tauri::{AppHandle, Emitter, Manager, tray::TrayIcon};
 mod bluetooth;
 mod diagnostics;
 mod panel_position;
+mod startup;
 mod tray;
 mod tray_icon;
 
@@ -59,6 +60,25 @@ fn get_diagnostics_report(app: AppHandle) -> Result<String, String> {
     diagnostics_report(&app)
 }
 
+#[tauri::command]
+fn get_startup_enabled() -> Result<bool, String> {
+    startup::is_enabled()
+}
+
+#[tauri::command]
+fn set_startup_enabled(app: AppHandle, enabled: bool) -> Result<bool, String> {
+    match startup::set_enabled(enabled) {
+        Ok(enabled) => {
+            record_diagnostic_event(&app, format!("startup enabled={enabled}"));
+            Ok(enabled)
+        }
+        Err(error) => {
+            record_diagnostic_event(&app, format!("startup update failed: {error}"));
+            Err(error)
+        }
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .manage(AppState::default())
@@ -74,7 +94,9 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             refresh_devices,
-            get_diagnostics_report
+            get_diagnostics_report,
+            get_startup_enabled,
+            set_startup_enabled
         ])
         .run(tauri::generate_context!())
         .expect("error while running Blue Battery");
