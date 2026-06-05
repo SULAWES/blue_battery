@@ -24,7 +24,7 @@ pub fn render_battery_icon(percent: Option<u8>) -> Image<'static> {
 fn render_icon_bitmap(percent: Option<u8>) -> IconBitmap {
     percent
         .and_then(render_system_batmeter_icon)
-        .unwrap_or_else(|| render_tray_battery_icon(percent))
+        .unwrap_or_else(|| render_numeric_fallback_icon(percent))
 }
 
 #[cfg(windows)]
@@ -204,24 +204,16 @@ fn parse_batmeter_dib(bytes: &[u8]) -> Option<BatmeterStrip> {
     })
 }
 
-fn render_tray_battery_icon(percent: Option<u8>) -> IconBitmap {
+fn render_numeric_fallback_icon(percent: Option<u8>) -> IconBitmap {
     let mut pixels = vec![0; (WIDTH * HEIGHT * 4) as usize];
-    let stroke = Color(24, 24, 24, 255);
-    let halo = Color(255, 255, 255, 210);
     let muted = Color(96, 96, 96, 255);
-    let fill = percent.map(level_color).unwrap_or(muted);
+    let text = percent
+        .map(|percent| percent.min(100).to_string())
+        .unwrap_or_else(|| "--".to_string());
+    let scale = if text.len() >= 3 { 3 } else { 4 };
+    let color = percent.map(level_color).unwrap_or(muted);
 
-    draw_battery_halo(&mut pixels, halo);
-    draw_battery_outline(&mut pixels, stroke);
-
-    if let Some(percent) = percent {
-        let fill_width = ((18u32 * percent as u32) + 99) / 100;
-        if fill_width > 0 {
-            draw_rect(&mut pixels, 7, 13, fill_width.min(18), 6, fill);
-        }
-    } else {
-        draw_rect(&mut pixels, 8, 15, 16, 3, muted);
-    }
+    draw_pixel_text(&mut pixels, &text, scale, color);
 
     IconBitmap {
         pixels,
@@ -240,19 +232,57 @@ fn level_color(percent: u8) -> Color {
     }
 }
 
-fn draw_battery_halo(pixels: &mut [u8], color: Color) {
-    draw_rect(pixels, 1, 6, 28, 20, color);
-    draw_rect(pixels, 28, 11, 3, 10, color);
+fn draw_pixel_text(pixels: &mut [u8], text: &str, scale: u32, color: Color) {
+    let glyph_width = 3;
+    let glyph_height = 5;
+    let gap = 2;
+    let char_count = text.chars().count() as u32;
+    let text_width = char_count * glyph_width * scale + char_count.saturating_sub(1) * gap;
+    let text_height = glyph_height * scale;
+    let start_x = WIDTH.saturating_sub(text_width) / 2;
+    let start_y = HEIGHT.saturating_sub(text_height) / 2;
+    let mut x = start_x;
+
+    for ch in text.chars() {
+        draw_digit_glyph(pixels, ch, x, start_y, scale, color);
+        x += glyph_width * scale + gap;
+    }
 }
 
-fn draw_battery_outline(pixels: &mut [u8], color: Color) {
-    draw_rect(pixels, 3, 8, 24, 2, color);
-    draw_rect(pixels, 3, 22, 24, 2, color);
-    draw_rect(pixels, 3, 8, 2, 16, color);
-    draw_rect(pixels, 25, 8, 2, 16, color);
-    draw_rect(pixels, 27, 13, 3, 6, color);
-    draw_rect(pixels, 6, 12, 1, 8, color);
-    draw_rect(pixels, 24, 12, 1, 8, color);
+fn draw_digit_glyph(pixels: &mut [u8], ch: char, x: u32, y: u32, scale: u32, color: Color) {
+    let pattern = digit_pattern(ch);
+
+    for (row, bits) in pattern.iter().enumerate() {
+        for col in 0..3 {
+            if bits & (1 << (2 - col)) != 0 {
+                draw_rect(
+                    pixels,
+                    x + col * scale,
+                    y + row as u32 * scale,
+                    scale,
+                    scale,
+                    color,
+                );
+            }
+        }
+    }
+}
+
+fn digit_pattern(ch: char) -> [u8; 5] {
+    match ch {
+        '0' => [0b111, 0b101, 0b101, 0b101, 0b111],
+        '1' => [0b010, 0b110, 0b010, 0b010, 0b111],
+        '2' => [0b111, 0b001, 0b111, 0b100, 0b111],
+        '3' => [0b111, 0b001, 0b111, 0b001, 0b111],
+        '4' => [0b101, 0b101, 0b111, 0b001, 0b001],
+        '5' => [0b111, 0b100, 0b111, 0b001, 0b111],
+        '6' => [0b111, 0b100, 0b111, 0b101, 0b111],
+        '7' => [0b111, 0b001, 0b010, 0b010, 0b010],
+        '8' => [0b111, 0b101, 0b111, 0b101, 0b111],
+        '9' => [0b111, 0b101, 0b111, 0b001, 0b111],
+        '-' => [0b000, 0b000, 0b111, 0b000, 0b000],
+        _ => [0b111, 0b001, 0b011, 0b000, 0b010],
+    }
 }
 
 fn draw_rect(pixels: &mut [u8], x: u32, y: u32, width: u32, height: u32, color: Color) {
@@ -370,6 +400,33 @@ mod tests {
         assert_eq!(pixel(&bitmap, 0, 0).3, 0, "transparent background");
         assert!(has_color(&bitmap, Color(24, 24, 24, 255)));
         assert!(has_color(&bitmap, Color(16, 124, 16, 255)));
+    }
+
+    #[test]
+    fn renders_numeric_fallback_percent() {
+        let bitmap = render_numeric_fallback_icon(Some(48));
+        let (min_x, min_y, max_x, max_y) =
+            nontransparent_bounds(&bitmap).expect("visible fallback number");
+
+        assert_eq!(bitmap.width, 32);
+        assert_eq!(bitmap.height, 32);
+        assert!(
+            max_x - min_x + 1 >= 15,
+            "numeric fallback should be readable"
+        );
+        assert!(
+            max_y - min_y + 1 >= 17,
+            "numeric fallback should fill tray height"
+        );
+        assert!(has_color(&bitmap, Color(16, 124, 16, 255)));
+    }
+
+    #[test]
+    fn renders_numeric_fallback_placeholder_for_unknown_battery() {
+        let bitmap = render_numeric_fallback_icon(None);
+
+        assert!(has_color(&bitmap, Color(96, 96, 96, 255)));
+        assert_eq!(pixel(&bitmap, 1, 1).3, 0, "transparent background");
     }
 
     #[test]
