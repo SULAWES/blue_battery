@@ -12,6 +12,7 @@ use bluetooth::RefreshResult;
 use tauri::{AppHandle, Emitter, Manager, tray::TrayIcon};
 
 mod bluetooth;
+mod panel_position;
 mod tray;
 mod tray_icon;
 
