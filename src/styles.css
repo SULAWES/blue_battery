@@ -131,7 +131,7 @@ button {
 }
 
 .settings-glyph {
-  color: var(--win-accent);
+  color: var(--win-icon);
   font-size: 16px;
 }
 
@@ -303,7 +303,7 @@ button {
   place-items: center;
   border: 1px solid transparent;
   border-radius: 4px;
-  color: var(--win-accent);
+  color: var(--win-icon);
   background: transparent;
   cursor: pointer;
 }

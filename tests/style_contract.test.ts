@@ -52,6 +52,8 @@ test("uses compact WinUI-like control geometry", () => {
 
 test("uses Segoe Fluent Icons for in-panel iconography", () => {
   assert.match(block(".fluent-icon"), /font-family:\s*"Segoe Fluent Icons"/);
+  assert.match(block(".settings-button"), /color:\s*var\(--win-icon\)/);
+  assert.match(block(".settings-glyph"), /color:\s*var\(--win-icon\)/);
   assert.match(block(".settings-glyph"), /font-size:\s*16px/);
   assert.match(block(".menu-refresh-glyph"), /font-size:\s*14px/);
 });
