@@ -8,21 +8,21 @@ import {
 export type PanelView = {
   summary: string;
   contentHtml: string;
-  timestamp: string;
-  connectedCount: string;
+  connectedBadge: string;
+  footerStatus: string;
 };
 
 export function buildPanelView(result: RefreshResult): PanelView {
   const state = describePanelState(result, false);
 
   return {
-    summary: state.summary,
+    summary: `上次更新 ${formatTime(result.refreshed_at_ms)}`,
     contentHtml:
       state.kind === "devices"
         ? renderDeviceList(result.devices, result.errors)
         : `${renderMessageStateHtml(state)}${renderErrors(result.errors)}`,
-    timestamp: formatTime(result.refreshed_at_ms),
-    connectedCount: `${result.connected_le_device_count} 个已连接 BLE 设备`,
+    connectedBadge: formatConnectedBadge(result.connected_le_device_count),
+    footerStatus: "就绪",
   };
 }
 
@@ -30,8 +30,8 @@ export function buildTransientPanelView(state: PanelState): PanelView {
   return {
     summary: state.summary,
     contentHtml: renderMessageStateHtml(state),
-    timestamp: "--",
-    connectedCount: "0 个已连接 BLE 设备",
+    connectedBadge: "0 BLE",
+    footerStatus: "就绪",
   };
 }
 
@@ -40,17 +40,17 @@ export function buildCommandErrorView(
   fallback: RefreshResult | null,
 ): PanelView {
   return {
-    summary: "刷新失败",
+    summary: fallback ? `上次更新 ${formatTime(fallback.refreshed_at_ms)}` : "刷新失败",
     contentHtml: `
     <div class="empty" data-state="error">
       <div class="empty-title">读取失败</div>
       <div class="empty-detail">${escapeHtml(message)}</div>
     </div>
   `,
-    timestamp: fallback ? formatTime(fallback.refreshed_at_ms) : "--",
-    connectedCount: fallback
-      ? `${fallback.connected_le_device_count} 个已连接 BLE 设备`
-      : "0 个已连接 BLE 设备",
+    connectedBadge: fallback
+      ? formatConnectedBadge(fallback.connected_le_device_count)
+      : "0 BLE",
+    footerStatus: "就绪",
   };
 }
 
@@ -82,7 +82,6 @@ function renderDevice(device: DeviceBatteryInfo) {
 
   return `
     <article class="device-row">
-      <span class="fluent-icon device-symbol" data-level="${level}" aria-hidden="true">&#xE83F;</span>
       <div class="device-main">
         <div class="device-name">${escapeHtml(device.display_name)}</div>
         <div class="device-meta">${escapeHtml(device.connection_state)} · ${escapeHtml(device.source_kind)}</div>
@@ -115,6 +114,10 @@ function formatTime(ms: number) {
     minute: "2-digit",
     second: "2-digit",
   }).format(new Date(ms));
+}
+
+function formatConnectedBadge(count: number) {
+  return `${Math.max(0, count)} BLE`;
 }
 
 function escapeHtml(value: string) {

@@ -35,12 +35,14 @@ test("builds a panel view for a displayable device", () => {
     }),
   );
 
-  assert.equal(view.summary, "Keychron Z6 Ultra 8K 48%");
+  assert.match(view.summary, /^上次更新 /);
+  assert.doesNotMatch(view.summary, /Keychron Z6 Ultra 8K/);
   assert.match(view.contentHtml, /class="device-list"/);
   assert.match(view.contentHtml, /Keychron Z6 Ultra 8K/);
-  assert.match(view.contentHtml, /class="fluent-icon device-symbol"/);
-  assert.match(view.contentHtml, /&#xE83F;/);
-  assert.equal(view.connectedCount, "1 个已连接 BLE 设备");
+  assert.doesNotMatch(view.contentHtml, /device-symbol/);
+  assert.doesNotMatch(view.contentHtml, /&#xE83F;/);
+  assert.equal(view.connectedBadge, "1 BLE");
+  assert.equal(view.footerStatus, "就绪");
 });
 
 test("builds a transient loading view without a refresh result", () => {
@@ -48,8 +50,8 @@ test("builds a transient loading view without a refresh result", () => {
 
   assert.equal(view.summary, "正在读取");
   assert.match(view.contentHtml, /正在读取电量/);
-  assert.equal(view.timestamp, "--");
-  assert.equal(view.connectedCount, "0 个已连接 BLE 设备");
+  assert.equal(view.connectedBadge, "0 BLE");
+  assert.equal(view.footerStatus, "就绪");
 });
 
 test("builds a command error view while preserving the last refresh metadata", () => {
@@ -61,9 +63,9 @@ test("builds a command error view while preserving the last refresh metadata", (
     }),
   );
 
-  assert.equal(view.summary, "刷新失败");
+  assert.match(view.summary, /^上次更新 /);
   assert.match(view.contentHtml, /读取失败/);
   assert.match(view.contentHtml, /Bluetooth refresh failed/);
-  assert.equal(view.connectedCount, "1 个已连接 BLE 设备");
-  assert.notEqual(view.timestamp, "--");
+  assert.equal(view.connectedBadge, "1 BLE");
+  assert.equal(view.footerStatus, "就绪");
 });

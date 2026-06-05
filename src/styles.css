@@ -82,13 +82,18 @@ button {
 }
 
 .topbar {
-  height: 68px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px 10px;
+  height: 64px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 13px 15px 10px;
   border-bottom: 1px solid var(--win-border);
   background: var(--win-surface);
+}
+
+.title-stack {
+  min-width: 0;
 }
 
 .app-title {
@@ -108,25 +113,14 @@ button {
   white-space: nowrap;
 }
 
-.icon-button {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--win-border);
-  border-radius: 4px;
-  color: var(--win-text);
-  background: var(--win-card);
-  cursor: pointer;
-}
-
-.icon-button:hover {
-  background: var(--win-card-hover);
-  border-color: var(--win-border-strong);
-}
-
-.icon-button:active {
-  background: var(--win-surface);
+.topbar-count {
+  justify-self: end;
+  margin-top: 2px;
+  color: var(--win-text-tertiary);
+  font-size: 12px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .fluent-icon {
@@ -136,24 +130,19 @@ button {
   -webkit-font-smoothing: antialiased;
 }
 
-.refresh-glyph {
-  font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets", sans-serif;
+.settings-glyph {
   color: var(--win-accent);
   font-size: 16px;
 }
 
-.icon-button:hover .refresh-glyph {
-  color: var(--win-accent-hover);
-}
-
-.icon-button.is-loading .refresh-glyph {
-  display: inline-block;
-  animation: spin 0.9s linear infinite;
+.menu-refresh-glyph {
+  color: var(--win-icon);
+  font-size: 14px;
 }
 
 .content {
   min-height: 0;
-  padding: 8px;
+  padding: 16px 8px 8px;
   overflow: auto;
 }
 
@@ -174,12 +163,12 @@ button {
 }
 
 .device-row {
-  min-height: 68px;
+  min-height: 76px;
   display: grid;
-  grid-template-columns: 34px 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  padding: 9px 10px;
+  gap: 14px;
+  padding: 13px 16px;
   border: 1px solid var(--win-border);
   border-radius: 8px;
   background: var(--win-card);
@@ -188,26 +177,6 @@ button {
 
 .device-row:hover {
   background: var(--win-card-hover);
-}
-
-.device-symbol {
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  justify-self: center;
-  align-self: center;
-  color: var(--win-success);
-  font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets", sans-serif;
-  font-size: 18px;
-}
-
-.device-symbol[data-level="mid"] {
-  color: var(--win-warning);
-}
-
-.device-symbol[data-level="low"] {
-  color: var(--win-danger);
 }
 
 .device-main {
@@ -308,20 +277,82 @@ button {
 }
 
 .footer {
+  position: relative;
   height: 36px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 0 12px;
+  padding: 0 14px 0 15px;
   color: var(--win-text-tertiary);
   font-size: 12px;
   border-top: 1px solid var(--win-border);
   background: var(--win-surface);
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.settings-area {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.settings-button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--win-accent);
+  background: transparent;
+  cursor: pointer;
+}
+
+.settings-button:hover {
+  border-color: var(--win-border);
+  background: var(--win-card-hover);
+}
+
+.settings-button:active {
+  background: var(--win-card);
+}
+
+.settings-menu {
+  position: absolute;
+  right: 0;
+  bottom: 32px;
+  min-width: 128px;
+  padding: 4px;
+  border: 1px solid var(--win-border-strong);
+  border-radius: 6px;
+  background: var(--win-card);
+  box-shadow: var(--win-shadow-flyout);
+  z-index: 10;
+}
+
+.settings-menu[hidden] {
+  display: none;
+}
+
+.menu-item {
+  width: 100%;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--win-text);
+  background: transparent;
+  cursor: pointer;
+}
+
+.menu-item:hover {
+  background: var(--win-card-hover);
+}
+
+.menu-item:disabled {
+  color: var(--win-text-tertiary);
+  cursor: default;
 }

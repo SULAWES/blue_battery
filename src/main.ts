@@ -21,32 +21,70 @@ let refreshing = false;
 app.innerHTML = `
   <main class="shell">
     <header class="topbar">
-      <div>
+      <div class="title-stack">
         <div class="app-title">Blue Battery</div>
         <div id="summary" class="summary">正在读取</div>
       </div>
-      <button id="refresh" class="icon-button" type="button" title="刷新" aria-label="刷新">
-        <span class="fluent-icon refresh-glyph" aria-hidden="true">&#xE72C;</span>
-      </button>
+      <div id="connected-badge" class="topbar-count">0 BLE</div>
     </header>
 
     <section id="content" class="content" aria-live="polite"></section>
 
     <footer class="footer">
-      <span id="timestamp">--</span>
-      <span id="connected-count">0 个已连接 BLE 设备</span>
+      <span id="footer-status">就绪</span>
+      <div class="settings-area">
+        <button
+          id="settings"
+          class="settings-button"
+          type="button"
+          title="设置"
+          aria-label="设置"
+          aria-haspopup="menu"
+          aria-expanded="false"
+        >
+          <span class="fluent-icon settings-glyph" aria-hidden="true">&#xE713;</span>
+        </button>
+        <div id="settings-menu" class="settings-menu" role="menu" hidden>
+          <button id="menu-refresh" class="menu-item" type="button" role="menuitem">
+            <span class="fluent-icon menu-refresh-glyph" aria-hidden="true">&#xE72C;</span>
+            <span>刷新</span>
+          </button>
+        </div>
+      </div>
     </footer>
   </main>
 `;
 
 const summaryEl = document.querySelector<HTMLDivElement>("#summary")!;
 const contentEl = document.querySelector<HTMLElement>("#content")!;
-const timestampEl = document.querySelector<HTMLSpanElement>("#timestamp")!;
-const connectedCountEl = document.querySelector<HTMLSpanElement>("#connected-count")!;
-const refreshButton = document.querySelector<HTMLButtonElement>("#refresh")!;
+const connectedBadgeEl = document.querySelector<HTMLDivElement>("#connected-badge")!;
+const footerStatusEl = document.querySelector<HTMLSpanElement>("#footer-status")!;
+const settingsButton = document.querySelector<HTMLButtonElement>("#settings")!;
+const settingsMenu = document.querySelector<HTMLDivElement>("#settings-menu")!;
+const refreshMenuItem = document.querySelector<HTMLButtonElement>("#menu-refresh")!;
 
-refreshButton.addEventListener("click", () => {
+settingsButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  setSettingsMenuOpen(settingsMenu.hidden === true);
+});
+
+settingsMenu.addEventListener("click", (event) => {
+  event.stopPropagation();
+});
+
+refreshMenuItem.addEventListener("click", () => {
+  setSettingsMenuOpen(false);
   void refreshDevices();
+});
+
+document.addEventListener("click", () => {
+  setSettingsMenuOpen(false);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    setSettingsMenuOpen(false);
+  }
 });
 
 void listen<RefreshResult>("devices-refreshed", (event) => {
@@ -65,7 +103,7 @@ async function refreshDevices() {
   }
 
   refreshing = true;
-  refreshButton.classList.add("is-loading");
+  refreshMenuItem.disabled = true;
   if (!lastResult) {
     applyPanelView(buildTransientPanelView(describePanelState(null, true)));
   }
@@ -78,7 +116,7 @@ async function refreshDevices() {
     renderError(error instanceof Error ? error.message : String(error));
   } finally {
     refreshing = false;
-    refreshButton.classList.remove("is-loading");
+    refreshMenuItem.disabled = false;
   }
 }
 
@@ -93,6 +131,11 @@ function renderError(message: string) {
 function applyPanelView(view: PanelView) {
   summaryEl.textContent = view.summary;
   contentEl.innerHTML = view.contentHtml;
-  timestampEl.textContent = view.timestamp;
-  connectedCountEl.textContent = view.connectedCount;
+  connectedBadgeEl.textContent = view.connectedBadge;
+  footerStatusEl.textContent = view.footerStatus;
+}
+
+function setSettingsMenuOpen(open: boolean) {
+  settingsMenu.hidden = !open;
+  settingsButton.setAttribute("aria-expanded", String(open));
 }
