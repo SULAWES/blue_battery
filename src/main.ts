@@ -120,8 +120,14 @@ document.addEventListener("click", () => {
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
+    const hasInnerFlyoutOpen = settingsMenu.hidden === false || diagnosticsPanel.hidden === false;
+
     setSettingsMenuOpen(false);
     setDiagnosticsOpen(false);
+
+    if (!hasInnerFlyoutOpen) {
+      void hidePanel();
+    }
   }
 });
 
@@ -218,4 +224,12 @@ async function showDiagnostics() {
 
 function setDiagnosticsOpen(open: boolean) {
   diagnosticsPanel.hidden = !open;
+}
+
+async function hidePanel() {
+  try {
+    await invoke<void>("hide_panel");
+  } catch {
+    footerStatusEl.textContent = "关闭面板失败";
+  }
 }

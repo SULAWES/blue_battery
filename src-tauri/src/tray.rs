@@ -1,10 +1,6 @@
-use crate::{
-    bluetooth::RefreshResult,
-    panel_position::{PanelSize, Point, WorkArea, position_near_tray_anchor},
-    tray_icon,
-};
+use crate::{bluetooth::RefreshResult, panel_window, tray_icon};
 use tauri::{
-    App, AppHandle, Manager, PhysicalPosition, WebviewWindow,
+    App, AppHandle,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent},
 };
@@ -31,11 +27,13 @@ pub fn setup(app: &mut App, refresh: fn(AppHandle)) -> tauri::Result<TrayIcon> {
                 ..
             } = event
             {
-                show_panel(&click_handle, Some(position));
+                let _ = panel_window::toggle(&click_handle, Some(position));
             }
         })
         .on_menu_event(move |app, event| match event.id().as_ref() {
-            "open" => show_panel(app, None),
+            "open" => {
+                let _ = panel_window::show(app, None);
+            }
             "refresh" => refresh(refresh_handle.clone()),
             "quit" => app.exit(0),
             _ => {}
@@ -67,60 +65,6 @@ pub fn build_tooltip(result: &RefreshResult) -> String {
         .join(" · ");
 
     format!("Blue Battery: {summary}")
-}
-
-fn show_panel(app: &AppHandle, anchor: Option<PhysicalPosition<f64>>) {
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = position_panel_near_anchor(&window, anchor);
-        let _ = window.show();
-        let _ = window.unminimize();
-        let _ = window.set_focus();
-    }
-}
-
-fn position_panel_near_anchor(
-    window: &WebviewWindow,
-    anchor: Option<PhysicalPosition<f64>>,
-) -> tauri::Result<()> {
-    let anchor = anchor.or_else(|| window.cursor_position().ok());
-    let monitor = match anchor {
-        Some(anchor) => window
-            .monitor_from_point(anchor.x, anchor.y)?
-            .or(window.current_monitor()?)
-            .or(window.primary_monitor()?),
-        None => window.current_monitor()?.or(window.primary_monitor()?),
-    };
-    let Some(monitor) = monitor else {
-        return Ok(());
-    };
-
-    let size = window.outer_size()?;
-    let work_area = monitor.work_area();
-    let work_area = WorkArea {
-        x: work_area.position.x,
-        y: work_area.position.y,
-        width: work_area.size.width,
-        height: work_area.size.height,
-    };
-    let anchor = anchor
-        .map(|anchor| Point {
-            x: anchor.x.round() as i32,
-            y: anchor.y.round() as i32,
-        })
-        .unwrap_or_else(|| Point {
-            x: work_area.x + i32::try_from(work_area.width).unwrap_or(i32::MAX),
-            y: work_area.y + i32::try_from(work_area.height).unwrap_or(i32::MAX),
-        });
-    let position = position_near_tray_anchor(
-        anchor,
-        PanelSize {
-            width: size.width,
-            height: size.height,
-        },
-        work_area,
-    );
-
-    window.set_position(PhysicalPosition::new(position.x, position.y))
 }
 
 #[cfg(test)]

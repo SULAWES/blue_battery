@@ -28,3 +28,9 @@ test("exposes startup toggle from the settings menu", () => {
   assert.match(source, /get_startup_enabled/);
   assert.match(source, /set_startup_enabled/);
 });
+
+test("closes the panel with Escape when no inner flyout is open", () => {
+  assert.match(source, /hide_panel/);
+  assert.match(source, /invoke\s*<\s*void\s*>\("hide_panel"\)/);
+  assert.match(source, /event\.key\s*===\s*"Escape"/);
+});
