@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildPanelView, buildTransientPanelView } from "../src/render.ts";
+import {
+  buildCommandErrorView,
+  buildPanelView,
+  buildTransientPanelView,
+} from "../src/render.ts";
 import { describePanelState, type RefreshResult } from "../src/panel_state.ts";
 
 function result(partial: Partial<RefreshResult>): RefreshResult {
@@ -46,4 +50,20 @@ test("builds a transient loading view without a refresh result", () => {
   assert.match(view.contentHtml, /正在读取电量/);
   assert.equal(view.timestamp, "--");
   assert.equal(view.connectedCount, "0 个已连接 BLE 设备");
+});
+
+test("builds a command error view while preserving the last refresh metadata", () => {
+  const view = buildCommandErrorView(
+    "Bluetooth refresh failed",
+    result({
+      connected_le_device_count: 1,
+      refreshed_at_ms: Date.UTC(2026, 5, 5, 3, 4, 5),
+    }),
+  );
+
+  assert.equal(view.summary, "刷新失败");
+  assert.match(view.contentHtml, /读取失败/);
+  assert.match(view.contentHtml, /Bluetooth refresh failed/);
+  assert.equal(view.connectedCount, "1 个已连接 BLE 设备");
+  assert.notEqual(view.timestamp, "--");
 });

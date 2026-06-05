@@ -1,6 +1,12 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::sync::Mutex;
+use std::{
+    sync::{
+        Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
+};
 
 use bluetooth::RefreshResult;
 use tauri::{AppHandle, Emitter, Manager, tray::TrayIcon};
@@ -9,10 +15,13 @@ mod bluetooth;
 mod tray;
 mod tray_icon;
 
+const AUTO_REFRESH_INTERVAL: Duration = Duration::from_secs(60);
+
 #[derive(Default)]
 struct AppState {
     tray: Mutex<Option<TrayIcon>>,
     latest: Mutex<Option<RefreshResult>>,
+    background_refresh_running: AtomicBool,
 }
 
 #[tauri::command]
@@ -32,7 +41,8 @@ fn main() {
             setup_tray(app)?;
 
             let app_handle = app.handle().clone();
-            refresh_in_background(app_handle);
+            refresh_in_background(app_handle.clone());
+            start_auto_refresh(app_handle)?;
 
             Ok(())
         })
@@ -54,19 +64,46 @@ fn setup_tray(app: &mut tauri::App) -> tauri::Result<()> {
     Ok(())
 }
 
+fn start_auto_refresh(app: AppHandle) -> tauri::Result<()> {
+    std::thread::Builder::new()
+        .name("blue-battery-refresh".to_string())
+        .spawn(move || {
+            loop {
+                std::thread::sleep(AUTO_REFRESH_INTERVAL);
+                refresh_in_background(app.clone());
+            }
+        })
+        .map(|_| ())
+        .map_err(|error| tauri::Error::Anyhow(anyhow::anyhow!("auto refresh thread: {error}")))
+}
+
 fn refresh_in_background(app: AppHandle) {
+    let state = app.state::<AppState>();
+    if !try_begin_background_refresh(&state.background_refresh_running) {
+        return;
+    }
+
     tauri::async_runtime::spawn(async move {
         let task_result =
             tauri::async_runtime::spawn_blocking(bluetooth::read_connected_devices).await;
 
-        let Ok(Ok(result)) = task_result else {
-            return;
-        };
-
-        if apply_refresh_result(&app, &result).is_ok() {
+        if let Ok(Ok(result)) = task_result
+            && apply_refresh_result(&app, &result).is_ok()
+        {
             let _ = app.emit("devices-refreshed", result);
         }
+
+        let state = app.state::<AppState>();
+        finish_background_refresh(&state.background_refresh_running);
     });
+}
+
+fn try_begin_background_refresh(running: &AtomicBool) -> bool {
+    !running.swap(true, Ordering::AcqRel)
+}
+
+fn finish_background_refresh(running: &AtomicBool) {
+    running.store(false, Ordering::Release);
 }
 
 fn apply_refresh_result(app: &AppHandle, result: &RefreshResult) -> Result<(), String> {
@@ -95,4 +132,27 @@ fn apply_refresh_result(app: &AppHandle, result: &RefreshResult) -> Result<(), S
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::AtomicBool;
+
+    #[test]
+    fn background_refresh_gate_prevents_overlapping_refreshes() {
+        let running = AtomicBool::new(false);
+
+        assert!(try_begin_background_refresh(&running));
+        assert!(!try_begin_background_refresh(&running));
+
+        finish_background_refresh(&running);
+        assert!(try_begin_background_refresh(&running));
+    }
+
+    #[test]
+    fn automatic_refresh_interval_stays_lightweight() {
+        assert!(AUTO_REFRESH_INTERVAL.as_secs() >= 30);
+        assert!(AUTO_REFRESH_INTERVAL.as_secs() <= 60);
+    }
 }
