@@ -9,9 +9,11 @@ use std::{
 };
 
 use bluetooth::RefreshResult;
+use diagnostics::{Diagnostics, RefreshSource};
 use tauri::{AppHandle, Emitter, Manager, tray::TrayIcon};
 
 mod bluetooth;
+mod diagnostics;
 mod panel_position;
 mod tray;
 mod tray_icon;
@@ -22,17 +24,39 @@ const AUTO_REFRESH_INTERVAL: Duration = Duration::from_secs(60);
 struct AppState {
     tray: Mutex<Option<TrayIcon>>,
     latest: Mutex<Option<RefreshResult>>,
+    diagnostics: Mutex<Diagnostics>,
     background_refresh_running: AtomicBool,
 }
 
 #[tauri::command]
 async fn refresh_devices(app: AppHandle) -> Result<RefreshResult, String> {
-    let result = tauri::async_runtime::spawn_blocking(bluetooth::read_connected_devices)
-        .await
-        .map_err(|error| format!("Refresh task failed: {error}"))??;
+    let task_result = tauri::async_runtime::spawn_blocking(bluetooth::read_connected_devices).await;
 
-    apply_refresh_result(&app, &result)?;
+    let result = match task_result {
+        Ok(Ok(result)) => result,
+        Ok(Err(error)) => {
+            record_refresh_failure(&app, RefreshSource::Foreground, &error);
+            return Err(error);
+        }
+        Err(error) => {
+            let message = format!("Refresh task failed: {error}");
+            record_refresh_failure(&app, RefreshSource::Foreground, &message);
+            return Err(message);
+        }
+    };
+
+    if let Err(error) = apply_refresh_result(&app, &result) {
+        record_refresh_failure(&app, RefreshSource::Foreground, &error);
+        return Err(error);
+    }
+
+    record_refresh_result(&app, RefreshSource::Foreground, &result);
     Ok(result)
+}
+
+#[tauri::command]
+fn get_diagnostics_report(app: AppHandle) -> Result<String, String> {
+    diagnostics_report(&app)
 }
 
 fn main() {
@@ -42,12 +66,16 @@ fn main() {
             setup_tray(app)?;
 
             let app_handle = app.handle().clone();
+            record_diagnostic_event(&app_handle, "app started");
             refresh_in_background(app_handle.clone());
             start_auto_refresh(app_handle)?;
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![refresh_devices])
+        .invoke_handler(tauri::generate_handler![
+            refresh_devices,
+            get_diagnostics_report
+        ])
         .run(tauri::generate_context!())
         .expect("error while running Blue Battery");
 }
@@ -81,6 +109,7 @@ fn start_auto_refresh(app: AppHandle) -> tauri::Result<()> {
 fn refresh_in_background(app: AppHandle) {
     let state = app.state::<AppState>();
     if !try_begin_background_refresh(&state.background_refresh_running) {
+        record_diagnostic_event(&app, "background refresh skipped: already running");
         return;
     }
 
@@ -88,10 +117,20 @@ fn refresh_in_background(app: AppHandle) {
         let task_result =
             tauri::async_runtime::spawn_blocking(bluetooth::read_connected_devices).await;
 
-        if let Ok(Ok(result)) = task_result
-            && apply_refresh_result(&app, &result).is_ok()
-        {
-            let _ = app.emit("devices-refreshed", result);
+        match task_result {
+            Ok(Ok(result)) => match apply_refresh_result(&app, &result) {
+                Ok(()) => {
+                    record_refresh_result(&app, RefreshSource::Background, &result);
+                    let _ = app.emit("devices-refreshed", result);
+                }
+                Err(error) => record_refresh_failure(&app, RefreshSource::Background, &error),
+            },
+            Ok(Err(error)) => record_refresh_failure(&app, RefreshSource::Background, &error),
+            Err(error) => record_refresh_failure(
+                &app,
+                RefreshSource::Background,
+                &format!("Refresh task failed: {error}"),
+            ),
         }
 
         let state = app.state::<AppState>();
@@ -133,6 +172,36 @@ fn apply_refresh_result(app: &AppHandle, result: &RefreshResult) -> Result<(), S
     }
 
     Ok(())
+}
+
+fn record_diagnostic_event(app: &AppHandle, event: impl Into<String>) {
+    let state = app.state::<AppState>();
+    if let Ok(mut diagnostics) = state.diagnostics.lock() {
+        diagnostics.record_event(event);
+    }
+}
+
+fn record_refresh_result(app: &AppHandle, source: RefreshSource, result: &RefreshResult) {
+    let state = app.state::<AppState>();
+    if let Ok(mut diagnostics) = state.diagnostics.lock() {
+        diagnostics.record_refresh_result(source, result);
+    }
+}
+
+fn record_refresh_failure(app: &AppHandle, source: RefreshSource, message: impl AsRef<str>) {
+    let state = app.state::<AppState>();
+    if let Ok(mut diagnostics) = state.diagnostics.lock() {
+        diagnostics.record_refresh_failure(source, message);
+    }
+}
+
+fn diagnostics_report(app: &AppHandle) -> Result<String, String> {
+    let state = app.state::<AppState>();
+    state
+        .diagnostics
+        .lock()
+        .map(|diagnostics| diagnostics.report())
+        .map_err(|_| "diagnostics state lock poisoned".to_string())
 }
 
 #[cfg(test)]

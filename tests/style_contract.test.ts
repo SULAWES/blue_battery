@@ -69,3 +69,9 @@ test("uses a compact topbar BLE badge", () => {
   assert.match(block(".topbar-count"), /font-size:\s*12px/);
   assert.match(block(".topbar-count"), /justify-self:\s*end/);
 });
+
+test("uses a compact diagnostics flyout inside the panel", () => {
+  assert.match(block(".diagnostics-panel"), /position:\s*absolute/);
+  assert.match(block(".diagnostics-panel"), /bottom:\s*42px/);
+  assert.match(block(".diagnostics-report"), /font-family:\s*Consolas/);
+});

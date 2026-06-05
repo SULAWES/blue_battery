@@ -140,6 +140,11 @@ button {
   font-size: 14px;
 }
 
+.menu-diagnostics-glyph {
+  color: var(--win-icon);
+  font-size: 14px;
+}
+
 .content {
   min-height: 0;
   padding: 16px 8px 8px;
@@ -274,6 +279,68 @@ button {
   color: var(--win-warning);
   font-size: 12px;
   line-height: 18px;
+}
+
+.diagnostics-panel {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 42px;
+  max-height: 260px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--win-border-strong);
+  border-radius: 8px;
+  background: var(--win-card);
+  box-shadow: var(--win-shadow-flyout);
+  z-index: 8;
+}
+
+.diagnostics-panel[hidden] {
+  display: none;
+}
+
+.diagnostics-header {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 8px 0 12px;
+  border-bottom: 1px solid var(--win-border);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.diagnostics-close {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--win-icon);
+  background: transparent;
+  cursor: pointer;
+}
+
+.diagnostics-close:hover {
+  border-color: var(--win-border);
+  background: var(--win-card-hover);
+}
+
+.diagnostics-report {
+  min-height: 0;
+  margin: 0;
+  padding: 10px 12px 12px;
+  overflow: auto;
+  color: var(--win-text-secondary);
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 11px;
+  line-height: 16px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .footer {

@@ -29,6 +29,15 @@ app.innerHTML = `
     </header>
 
     <section id="content" class="content" aria-live="polite"></section>
+    <section id="diagnostics-panel" class="diagnostics-panel" aria-label="诊断信息" hidden>
+      <div class="diagnostics-header">
+        <span>诊断信息</span>
+        <button id="diagnostics-close" class="diagnostics-close" type="button" title="关闭" aria-label="关闭诊断信息">
+          <span class="fluent-icon" aria-hidden="true">&#xE711;</span>
+        </button>
+      </div>
+      <pre id="diagnostics-report" class="diagnostics-report"></pre>
+    </section>
 
     <footer class="footer">
       <span id="footer-status">就绪</span>
@@ -49,6 +58,10 @@ app.innerHTML = `
             <span class="fluent-icon menu-refresh-glyph" aria-hidden="true">&#xE72C;</span>
             <span>刷新</span>
           </button>
+          <button id="menu-diagnostics" class="menu-item" type="button" role="menuitem">
+            <span class="fluent-icon menu-diagnostics-glyph" aria-hidden="true">&#xE946;</span>
+            <span>诊断信息</span>
+          </button>
         </div>
       </div>
     </footer>
@@ -62,6 +75,10 @@ const footerStatusEl = document.querySelector<HTMLSpanElement>("#footer-status")
 const settingsButton = document.querySelector<HTMLButtonElement>("#settings")!;
 const settingsMenu = document.querySelector<HTMLDivElement>("#settings-menu")!;
 const refreshMenuItem = document.querySelector<HTMLButtonElement>("#menu-refresh")!;
+const diagnosticsMenuItem = document.querySelector<HTMLButtonElement>("#menu-diagnostics")!;
+const diagnosticsPanel = document.querySelector<HTMLElement>("#diagnostics-panel")!;
+const diagnosticsReportEl = document.querySelector<HTMLPreElement>("#diagnostics-report")!;
+const diagnosticsCloseButton = document.querySelector<HTMLButtonElement>("#diagnostics-close")!;
 
 settingsButton.addEventListener("click", (event) => {
   event.stopPropagation();
@@ -77,6 +94,15 @@ refreshMenuItem.addEventListener("click", () => {
   void refreshDevices();
 });
 
+diagnosticsMenuItem.addEventListener("click", () => {
+  setSettingsMenuOpen(false);
+  void showDiagnostics();
+});
+
+diagnosticsCloseButton.addEventListener("click", () => {
+  setDiagnosticsOpen(false);
+});
+
 document.addEventListener("click", () => {
   setSettingsMenuOpen(false);
 });
@@ -84,6 +110,7 @@ document.addEventListener("click", () => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     setSettingsMenuOpen(false);
+    setDiagnosticsOpen(false);
   }
 });
 
@@ -138,4 +165,19 @@ function applyPanelView(view: PanelView) {
 function setSettingsMenuOpen(open: boolean) {
   settingsMenu.hidden = !open;
   settingsButton.setAttribute("aria-expanded", String(open));
+}
+
+async function showDiagnostics() {
+  setDiagnosticsOpen(true);
+  diagnosticsReportEl.textContent = "正在读取诊断信息...";
+
+  try {
+    diagnosticsReportEl.textContent = await invoke<string>("get_diagnostics_report");
+  } catch (error) {
+    diagnosticsReportEl.textContent = error instanceof Error ? error.message : String(error);
+  }
+}
+
+function setDiagnosticsOpen(open: boolean) {
+  diagnosticsPanel.hidden = !open;
 }

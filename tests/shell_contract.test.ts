@@ -15,3 +15,9 @@ test("renders a compact BLE count in the title bar", () => {
   assert.match(source, /id="connected-badge"/);
   assert.match(source, /class="topbar-count"/);
 });
+
+test("exposes diagnostics from the settings menu", () => {
+  assert.match(source, /id="menu-diagnostics"/);
+  assert.match(source, /id="diagnostics-panel"/);
+  assert.match(source, /get_diagnostics_report/);
+});
