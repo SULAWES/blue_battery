@@ -1,11 +1,22 @@
 use tauri::image::Image;
 
-const WIDTH: u32 = 32;
-const HEIGHT: u32 = 32;
-const BATMETER_BITMAP_RESOURCE: u16 = 358;
-const BATMETER_LEVEL_MAX_FRAME: usize = 9;
-const BATMETER_OUTLINE_FRAME: usize = 26;
-const RT_BITMAP: u16 = 2;
+const TRAY_ICON_SIZE: u32 = 40;
+const WIDTH: u32 = TRAY_ICON_SIZE;
+const HEIGHT: u32 = TRAY_ICON_SIZE;
+const FLUENT_FILL_COLOR: &str = "#212121";
+const FLUENT_BATTERY_SVGS: [&str; 11] = [
+    include_str!("../assets/fluent-battery/ic_fluent_battery_0_24_regular.svg"),
+    include_str!("../assets/fluent-battery/ic_fluent_battery_1_24_regular.svg"),
+    include_str!("../assets/fluent-battery/ic_fluent_battery_2_24_regular.svg"),
+    include_str!("../assets/fluent-battery/ic_fluent_battery_3_24_regular.svg"),
+    include_str!("../assets/fluent-battery/ic_fluent_battery_4_24_regular.svg"),
+    include_str!("../assets/fluent-battery/ic_fluent_battery_5_24_regular.svg"),
+    include_str!("../assets/fluent-battery/ic_fluent_battery_6_24_regular.svg"),
+    include_str!("../assets/fluent-battery/ic_fluent_battery_7_24_regular.svg"),
+    include_str!("../assets/fluent-battery/ic_fluent_battery_8_24_regular.svg"),
+    include_str!("../assets/fluent-battery/ic_fluent_battery_9_24_regular.svg"),
+    include_str!("../assets/fluent-battery/ic_fluent_battery_10_24_regular.svg"),
+];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct Color(u8, u8, u8, u8);
@@ -23,185 +34,65 @@ pub fn render_battery_icon(percent: Option<u8>) -> Image<'static> {
 
 fn render_icon_bitmap(percent: Option<u8>) -> IconBitmap {
     percent
-        .and_then(render_system_batmeter_icon)
+        .and_then(render_fluent_battery_icon)
         .unwrap_or_else(|| render_numeric_fallback_icon(percent))
 }
 
-#[cfg(windows)]
-fn render_system_batmeter_icon(percent: u8) -> Option<IconBitmap> {
-    let strip = load_batmeter_strip()?;
-    render_batmeter_frame(&strip, percent)
+fn render_fluent_battery_icon(percent: u8) -> Option<IconBitmap> {
+    let svg = FLUENT_BATTERY_SVGS.get(fluent_battery_asset_index(percent))?;
+    render_fluent_svg(svg, level_color(percent))
 }
 
-#[cfg(not(windows))]
-fn render_system_batmeter_icon(_percent: u8) -> Option<IconBitmap> {
-    None
+fn fluent_battery_asset_index(percent: u8) -> usize {
+    ((percent.min(100) as usize + 5) / 10).min(10)
 }
 
-fn batmeter_level_frame(percent: Option<u8>) -> usize {
-    let Some(percent) = percent else {
-        return BATMETER_OUTLINE_FRAME;
-    };
+fn render_fluent_svg(svg: &str, color: Color) -> Option<IconBitmap> {
+    use resvg::{tiny_skia, usvg};
 
-    ((percent.min(100) as usize * BATMETER_LEVEL_MAX_FRAME) + 50) / 100
-}
+    let svg = svg.replace(FLUENT_FILL_COLOR, &svg_color(color));
+    let tree = usvg::Tree::from_str(&svg, &usvg::Options::default()).ok()?;
+    let mut pixmap = tiny_skia::Pixmap::new(WIDTH, HEIGHT)?;
+    let scale_x = WIDTH as f32 / tree.size().width();
+    let scale_y = HEIGHT as f32 / tree.size().height();
 
-#[derive(Debug)]
-struct BatmeterStrip {
-    pixels: Vec<Color>,
-    width: u32,
-    height: u32,
-}
-
-fn render_batmeter_frame(strip: &BatmeterStrip, percent: u8) -> Option<IconBitmap> {
-    if strip.height != HEIGHT || strip.width < WIDTH * (BATMETER_OUTLINE_FRAME as u32 + 1) {
-        return None;
-    }
-
-    let mut pixels = vec![0; (WIDTH * HEIGHT * 4) as usize];
-    let level_frame = batmeter_level_frame(Some(percent));
-    let fill = level_color(percent);
-    let stroke = Color(24, 24, 24, 255);
-
-    for y in 0..HEIGHT {
-        for x in 0..WIDTH {
-            let outline = batmeter_light_pixel(strip, BATMETER_OUTLINE_FRAME, x, y)?;
-            let level = batmeter_light_pixel(strip, level_frame, x, y)?;
-
-            if outline {
-                set_pixel(&mut pixels, x, y, stroke);
-            } else if level {
-                set_pixel(&mut pixels, x, y, fill);
-            }
-        }
-    }
+    resvg::render(
+        &tree,
+        tiny_skia::Transform::from_scale(scale_x, scale_y),
+        &mut pixmap.as_mut(),
+    );
 
     Some(IconBitmap {
-        pixels,
+        pixels: unpremultiply_rgba(pixmap.data()),
         width: WIDTH,
         height: HEIGHT,
     })
 }
 
-fn batmeter_light_pixel(strip: &BatmeterStrip, frame: usize, x: u32, y: u32) -> Option<bool> {
-    let source_x = frame as u32 * WIDTH + x;
-    let index = (y * strip.width + source_x) as usize;
-    let Color(red, green, blue, _) = *strip.pixels.get(index)?;
-
-    Some(red > 220 && green > 220 && blue > 220)
+fn svg_color(Color(red, green, blue, _): Color) -> String {
+    format!("#{red:02X}{green:02X}{blue:02X}")
 }
 
-#[cfg(windows)]
-fn load_batmeter_strip() -> Option<BatmeterStrip> {
-    use std::{env, path::PathBuf};
-    use windows::{
-        Win32::{
-            Foundation::FreeLibrary,
-            System::LibraryLoader::{
-                FindResourceW, LOAD_LIBRARY_AS_DATAFILE, LoadLibraryExW, LoadResource,
-                LockResource, SizeofResource,
-            },
-        },
-        core::PCWSTR,
-    };
+fn unpremultiply_rgba(pixels: &[u8]) -> Vec<u8> {
+    let mut output = Vec::with_capacity(pixels.len());
 
-    let windir = env::var_os("WINDIR").map(PathBuf::from)?;
-    let resource_path = windir.join("SystemResources").join("batmeter.dll.mun");
-    let resource_path = wide_null(resource_path.to_string_lossy().as_ref());
-
-    unsafe {
-        let module = LoadLibraryExW(
-            PCWSTR(resource_path.as_ptr()),
-            None,
-            LOAD_LIBRARY_AS_DATAFILE,
-        )
-        .ok()?;
-        let resource = FindResourceW(
-            Some(module),
-            int_resource(BATMETER_BITMAP_RESOURCE),
-            int_resource(RT_BITMAP),
-        );
-
-        let strip = if resource.is_invalid() {
-            None
+    for pixel in pixels.chunks_exact(4) {
+        let alpha = pixel[3];
+        if alpha == 0 || alpha == 255 {
+            output.extend_from_slice(pixel);
         } else {
-            match LoadResource(Some(module), resource) {
-                Ok(loaded) => {
-                    let data = LockResource(loaded);
-                    let size = SizeofResource(Some(module), resource) as usize;
-
-                    if data.is_null() || size == 0 {
-                        None
-                    } else {
-                        let bytes = std::slice::from_raw_parts(data as *const u8, size);
-                        parse_batmeter_dib(bytes)
-                    }
-                }
-                Err(_) => None,
-            }
-        };
-
-        let _ = FreeLibrary(module);
-        strip
-    }
-}
-
-#[cfg(windows)]
-fn int_resource(value: u16) -> windows::core::PCWSTR {
-    windows::core::PCWSTR(value as usize as *const u16)
-}
-
-#[cfg(windows)]
-fn wide_null(value: &str) -> Vec<u16> {
-    value.encode_utf16().chain(std::iter::once(0)).collect()
-}
-
-fn parse_batmeter_dib(bytes: &[u8]) -> Option<BatmeterStrip> {
-    if bytes.len() < 40 {
-        return None;
-    }
-
-    let header_size = u32::from_le_bytes(bytes.get(0..4)?.try_into().ok()?);
-    let width = i32::from_le_bytes(bytes.get(4..8)?.try_into().ok()?);
-    let height = i32::from_le_bytes(bytes.get(8..12)?.try_into().ok()?);
-    let bit_count = u16::from_le_bytes(bytes.get(14..16)?.try_into().ok()?);
-    let compression = u32::from_le_bytes(bytes.get(16..20)?.try_into().ok()?);
-
-    if header_size < 40 || width <= 0 || height == 0 || bit_count != 32 || compression != 0 {
-        return None;
-    }
-
-    let width = width as u32;
-    let height_abs = height.unsigned_abs();
-    let row_stride = width.checked_mul(4)?;
-    let pixel_offset = header_size as usize;
-    let expected_size = pixel_offset.checked_add(row_stride.checked_mul(height_abs)? as usize)?;
-
-    if bytes.len() < expected_size {
-        return None;
-    }
-
-    let mut pixels = Vec::with_capacity((width * height_abs) as usize);
-    for y in 0..height_abs {
-        let source_y = if height > 0 { height_abs - 1 - y } else { y };
-        let row = pixel_offset + (source_y * row_stride) as usize;
-
-        for x in 0..width {
-            let index = row + (x * 4) as usize;
-            pixels.push(Color(
-                bytes[index + 2],
-                bytes[index + 1],
-                bytes[index],
-                bytes[index + 3],
-            ));
+            output.push(unpremultiply_channel(pixel[0], alpha));
+            output.push(unpremultiply_channel(pixel[1], alpha));
+            output.push(unpremultiply_channel(pixel[2], alpha));
+            output.push(alpha);
         }
     }
 
-    Some(BatmeterStrip {
-        pixels,
-        width,
-        height: height_abs,
-    })
+    output
+}
+
+fn unpremultiply_channel(channel: u8, alpha: u8) -> u8 {
+    (((channel as u16 * 255) + (alpha as u16 / 2)) / alpha as u16).min(255) as u8
 }
 
 fn render_numeric_fallback_icon(percent: Option<u8>) -> IconBitmap {
@@ -356,8 +247,8 @@ mod tests {
     fn renders_transparent_tray_bitmap_with_visible_battery_shape() {
         let bitmap = render_icon_bitmap(Some(48));
 
-        assert_eq!(bitmap.width, 32);
-        assert_eq!(bitmap.height, 32);
+        assert_eq!(bitmap.width, 40);
+        assert_eq!(bitmap.height, 40);
         assert!(nontransparent_pixels(&bitmap) > 20);
         assert_eq!(pixel(&bitmap, 1, 1).3, 0, "transparent background");
     }
@@ -369,11 +260,11 @@ mod tests {
             nontransparent_bounds(&bitmap).expect("visible tray icon");
 
         assert!(
-            max_x - min_x + 1 >= 26,
+            max_x - min_x + 1 >= 32,
             "battery icon should use most of the tray icon width, got x bounds {min_x}..{max_x}"
         );
         assert!(
-            max_y - min_y + 1 >= 16,
+            max_y - min_y + 1 >= 20,
             "battery icon should stay readable after tray scaling, got y bounds {min_y}..{max_y}"
         );
         assert!(
@@ -383,22 +274,25 @@ mod tests {
     }
 
     #[test]
-    fn maps_battery_percent_to_batmeter_frame() {
-        assert_eq!(batmeter_level_frame(Some(100)), 9);
-        assert_eq!(batmeter_level_frame(Some(48)), 4);
-        assert_eq!(batmeter_level_frame(Some(0)), 0);
-        assert_eq!(batmeter_level_frame(None), BATMETER_OUTLINE_FRAME);
+    fn maps_battery_percent_to_fluent_asset_index() {
+        assert_eq!(fluent_battery_asset_index(0), 0);
+        assert_eq!(fluent_battery_asset_index(5), 1);
+        assert_eq!(fluent_battery_asset_index(48), 5);
+        assert_eq!(fluent_battery_asset_index(95), 10);
+        assert_eq!(fluent_battery_asset_index(100), 10);
     }
 
-    #[cfg(windows)]
     #[test]
-    fn renders_system_batmeter_icon_when_available() {
-        let bitmap = render_system_batmeter_icon(48).expect("batmeter resource icon");
+    fn renders_fluent_battery_icon_with_level_color() {
+        let bitmap = render_fluent_battery_icon(48).expect("fluent battery icon");
+        let (min_x, min_y, max_x, max_y) =
+            nontransparent_bounds(&bitmap).expect("visible fluent tray icon");
 
-        assert_eq!(bitmap.width, 32);
-        assert_eq!(bitmap.height, 32);
+        assert_eq!(bitmap.width, 40);
+        assert_eq!(bitmap.height, 40);
         assert_eq!(pixel(&bitmap, 0, 0).3, 0, "transparent background");
-        assert!(has_color(&bitmap, Color(24, 24, 24, 255)));
+        assert!(max_x - min_x + 1 >= 32, "icon should fill tray width");
+        assert!(max_y - min_y + 1 >= 20, "icon should fill tray height");
         assert!(has_color(&bitmap, Color(16, 124, 16, 255)));
     }
 
@@ -408,8 +302,8 @@ mod tests {
         let (min_x, min_y, max_x, max_y) =
             nontransparent_bounds(&bitmap).expect("visible fallback number");
 
-        assert_eq!(bitmap.width, 32);
-        assert_eq!(bitmap.height, 32);
+        assert_eq!(bitmap.width, 40);
+        assert_eq!(bitmap.height, 40);
         assert!(
             max_x - min_x + 1 >= 15,
             "numeric fallback should be readable"

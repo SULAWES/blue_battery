@@ -33,6 +33,16 @@ if (Test-Path -LiteralPath $readmePath) {
     Copy-Item -LiteralPath $readmePath -Destination (Join-Path $stagingDir "README.md")
 }
 
+$fluentLicensePath = Join-Path $root "src-tauri\assets\fluent-battery\LICENSE"
+if (Test-Path -LiteralPath $fluentLicensePath) {
+    @"
+Blue Battery includes Microsoft Fluent UI System Icons battery assets.
+
+"@ | Set-Content -Path (Join-Path $stagingDir "THIRD_PARTY_NOTICES.txt") -Encoding UTF8
+    Get-Content -Path $fluentLicensePath -Raw |
+        Add-Content -Path (Join-Path $stagingDir "THIRD_PARTY_NOTICES.txt") -Encoding UTF8
+}
+
 @"
 Blue Battery demo v$version
 

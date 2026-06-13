@@ -11,6 +11,7 @@ tauri-build = { version = "2.6.2", features = [] }
 
 [dependencies]
 anyhow = "1.0"
+resvg = { version = "0.47", default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "2.11.2", features = ["tray-icon"] }
 windows = { version = "0.62.2", features = [
@@ -20,7 +21,6 @@ windows = { version = "0.62.2", features = [
     "Foundation",
     "Win32_Foundation",
     "Win32_Security",
-    "Win32_System_LibraryLoader",
     "Win32_System_Registry",
     "Win32_System_Threading",
     "Storage_Streams",
