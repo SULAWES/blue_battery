@@ -12,6 +12,8 @@ export type PanelView = {
   footerStatus: string;
 };
 
+const LOW_BATTERY_THRESHOLD = 20;
+
 export function buildPanelView(result: RefreshResult): PanelView {
   const state = describePanelState(result, false);
 
@@ -22,7 +24,7 @@ export function buildPanelView(result: RefreshResult): PanelView {
         ? renderDeviceList(result.devices, result.errors)
         : `${renderMessageStateHtml(state)}${renderErrors(result.errors)}`,
     connectedBadge: formatConnectedBadge(result.connected_le_device_count),
-    footerStatus: "就绪",
+    footerStatus: formatFooterStatus(result.devices),
   };
 }
 
@@ -118,6 +120,16 @@ function formatTime(ms: number) {
 
 function formatConnectedBadge(count: number) {
   return `${Math.max(0, count)} BLE`;
+}
+
+function formatFooterStatus(devices: DeviceBatteryInfo[]) {
+  const lowDevice = devices
+    .filter((device) => device.battery_percent <= LOW_BATTERY_THRESHOLD)
+    .sort((left, right) => left.battery_percent - right.battery_percent)[0];
+
+  return lowDevice
+    ? `低电量：${lowDevice.display_name} ${lowDevice.battery_percent}%`
+    : "就绪";
 }
 
 function escapeHtml(value: string) {

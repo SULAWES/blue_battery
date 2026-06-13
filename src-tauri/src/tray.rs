@@ -5,6 +5,8 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent},
 };
 
+const LOW_BATTERY_THRESHOLD: u8 = 20;
+
 pub fn setup(app: &mut App, refresh: fn(AppHandle)) -> tauri::Result<TrayIcon> {
     let open_item = MenuItem::with_id(app, "open", "打开面板", true, None::<&str>)?;
     let refresh_item = MenuItem::with_id(app, "refresh", "刷新", true, None::<&str>)?;
@@ -55,6 +57,18 @@ pub fn build_tooltip(result: &RefreshResult) -> String {
                 result.connected_le_device_count
             )
         };
+    }
+
+    if let Some(device) = result
+        .devices
+        .iter()
+        .filter(|device| device.battery_percent <= LOW_BATTERY_THRESHOLD)
+        .min_by_key(|device| device.battery_percent)
+    {
+        return format!(
+            "Blue Battery: 低电量：{}: {}%",
+            device.display_name, device.battery_percent
+        );
     }
 
     let summary = result
@@ -119,6 +133,16 @@ mod tests {
         assert_eq!(
             build_tooltip(&result),
             "Blue Battery: Keychron Z6 Ultra 8K: 48%"
+        );
+    }
+
+    #[test]
+    fn build_tooltip_reports_low_battery_warning() {
+        let result = refresh_result(vec![device("Keychron Z6 Ultra 8K", 18)], 1, Vec::new());
+
+        assert_eq!(
+            build_tooltip(&result),
+            "Blue Battery: 低电量：Keychron Z6 Ultra 8K: 18%"
         );
     }
 

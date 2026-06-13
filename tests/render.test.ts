@@ -45,6 +45,26 @@ test("builds a panel view for a displayable device", () => {
   assert.equal(view.footerStatus, "就绪");
 });
 
+test("shows a low battery footer warning for the lowest device", () => {
+  const view = buildPanelView(
+    result({
+      devices: [
+        {
+          device_id: "keyboard",
+          display_name: "Keychron Z6 Ultra 8K",
+          battery_percent: 18,
+          connection_state: "已连接",
+          source_kind: "GATT BAS",
+          updated_at_ms: 123,
+        },
+      ],
+      connected_le_device_count: 1,
+    }),
+  );
+
+  assert.equal(view.footerStatus, "低电量：Keychron Z6 Ultra 8K 18%");
+});
+
 test("builds a transient loading view without a refresh result", () => {
   const view = buildTransientPanelView(describePanelState(null, true));
 
