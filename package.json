@@ -9,7 +9,9 @@
     "test:panel": "node --experimental-strip-types --test tests/*.test.ts",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "tauri:build:release": "tauri build",
+    "demo:package": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-demo.ps1"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.0"

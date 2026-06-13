@@ -6,6 +6,7 @@ src-tauri/target-*/
 src-tauri/gen/
 dev_docs/
 probe_output/
+release/
 .vscode/
 .idea/
 *.log
