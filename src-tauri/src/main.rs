@@ -10,12 +10,14 @@ use std::{
 
 use bluetooth::RefreshResult;
 use diagnostics::{Diagnostics, RefreshSource};
+use single_instance::InstanceClaim;
 use tauri::{AppHandle, Emitter, Manager, tray::TrayIcon};
 
 mod bluetooth;
 mod diagnostics;
 mod panel_position;
 mod panel_window;
+mod single_instance;
 mod startup;
 mod tray;
 mod tray_icon;
@@ -25,6 +27,7 @@ const AUTO_REFRESH_INTERVAL: Duration = Duration::from_secs(60);
 #[derive(Default)]
 struct AppState {
     tray: Mutex<Option<TrayIcon>>,
+    single_instance: Mutex<Option<single_instance::InstanceGuard>>,
     latest: Mutex<Option<RefreshResult>>,
     diagnostics: Mutex<Diagnostics>,
     background_refresh_running: AtomicBool,
@@ -86,11 +89,25 @@ fn hide_panel(app: AppHandle) -> Result<(), String> {
 }
 
 fn main() {
+    let instance_guard = match single_instance::claim_or_signal_existing()
+        .expect("failed to initialize single-instance guard")
+    {
+        InstanceClaim::Primary(guard) => guard,
+        InstanceClaim::SecondarySignaled => return,
+    };
+
     tauri::Builder::default()
         .manage(AppState::default())
-        .setup(|app| {
+        .setup(move |app| {
             setup_tray(app)?;
             panel_window::register_auto_hide(app.handle())?;
+            single_instance::start_activation_listener(&instance_guard, app.handle().clone())
+                .map_err(|error| tauri::Error::Anyhow(anyhow::anyhow!(error)))?;
+
+            let state = app.state::<AppState>();
+            *state.single_instance.lock().map_err(|_| {
+                tauri::Error::Anyhow(anyhow::anyhow!("single-instance state lock poisoned"))
+            })? = Some(instance_guard);
 
             let app_handle = app.handle().clone();
             record_diagnostic_event(&app_handle, "app started");
