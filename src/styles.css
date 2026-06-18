@@ -145,6 +145,11 @@ button {
   font-size: 14px;
 }
 
+.menu-cleanup-glyph {
+  color: var(--win-icon);
+  font-size: 14px;
+}
+
 .menu-check-glyph {
   color: var(--win-icon);
   font-size: 14px;

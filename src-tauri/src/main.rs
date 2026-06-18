@@ -84,6 +84,20 @@ fn set_startup_enabled(app: AppHandle, enabled: bool) -> Result<bool, String> {
 }
 
 #[tauri::command]
+fn clear_startup_entry(app: AppHandle) -> Result<bool, String> {
+    match startup::clear_entry() {
+        Ok(removed) => {
+            record_diagnostic_event(&app, format!("startup entry cleared removed={removed}"));
+            Ok(removed)
+        }
+        Err(error) => {
+            record_diagnostic_event(&app, format!("startup entry cleanup failed: {error}"));
+            Err(error)
+        }
+    }
+}
+
+#[tauri::command]
 fn hide_panel(app: AppHandle) -> Result<(), String> {
     panel_window::hide(&app).map_err(|error| error.to_string())
 }
@@ -121,6 +135,7 @@ fn main() {
             get_diagnostics_report,
             get_startup_enabled,
             set_startup_enabled,
+            clear_startup_entry,
             hide_panel
         ])
         .run(tauri::generate_context!())

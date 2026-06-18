@@ -28,10 +28,14 @@ pub fn set_enabled(enabled: bool) -> Result<bool, String> {
     if enabled {
         write_run_value(&startup_command(&current_exe()?))?;
     } else {
-        delete_run_value()?;
+        let _ = delete_run_value()?;
     }
 
     is_enabled()
+}
+
+pub fn clear_entry() -> Result<bool, String> {
+    delete_run_value()
 }
 
 fn current_exe() -> Result<std::path::PathBuf, String> {
@@ -108,18 +112,19 @@ fn write_run_value(command: &str) -> Result<(), String> {
     win32_ok(status, "write startup value")
 }
 
-fn delete_run_value() -> Result<(), String> {
+fn delete_run_value() -> Result<bool, String> {
     let Some(key) = open_run_key(KEY_SET_VALUE, "open startup key")? else {
-        return Ok(());
+        return Ok(false);
     };
 
     let value_name = wide_null(RUN_VALUE_NAME);
     let status = unsafe { RegDeleteValueW(key.raw(), PCWSTR(value_name.as_ptr())) };
     if status == ERROR_FILE_NOT_FOUND {
-        return Ok(());
+        return Ok(false);
     }
 
-    win32_ok(status, "delete startup value")
+    win32_ok(status, "delete startup value")?;
+    Ok(true)
 }
 
 fn open_run_key(

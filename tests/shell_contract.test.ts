@@ -29,6 +29,12 @@ test("exposes startup toggle from the settings menu", () => {
   assert.match(source, /set_startup_enabled/);
 });
 
+test("exposes startup registry cleanup from the settings menu", () => {
+  assert.match(source, /id="menu-clear-startup"/);
+  assert.match(source, /clear_startup_entry/);
+  assert.match(source, /清理开机自启动项/);
+});
+
 test("closes the panel with Escape when no inner flyout is open", () => {
   assert.match(source, /hide_panel/);
   assert.match(source, /invoke\s*<\s*void\s*>\("hide_panel"\)/);

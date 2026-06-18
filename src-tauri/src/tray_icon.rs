@@ -1,22 +1,11 @@
 use tauri::image::Image;
 
-const TRAY_ICON_SIZE: u32 = 40;
-const WIDTH: u32 = TRAY_ICON_SIZE;
-const HEIGHT: u32 = TRAY_ICON_SIZE;
-const FLUENT_FILL_COLOR: &str = "#212121";
-const FLUENT_BATTERY_SVGS: [&str; 11] = [
-    include_str!("../assets/fluent-battery/ic_fluent_battery_0_24_regular.svg"),
-    include_str!("../assets/fluent-battery/ic_fluent_battery_1_24_regular.svg"),
-    include_str!("../assets/fluent-battery/ic_fluent_battery_2_24_regular.svg"),
-    include_str!("../assets/fluent-battery/ic_fluent_battery_3_24_regular.svg"),
-    include_str!("../assets/fluent-battery/ic_fluent_battery_4_24_regular.svg"),
-    include_str!("../assets/fluent-battery/ic_fluent_battery_5_24_regular.svg"),
-    include_str!("../assets/fluent-battery/ic_fluent_battery_6_24_regular.svg"),
-    include_str!("../assets/fluent-battery/ic_fluent_battery_7_24_regular.svg"),
-    include_str!("../assets/fluent-battery/ic_fluent_battery_8_24_regular.svg"),
-    include_str!("../assets/fluent-battery/ic_fluent_battery_9_24_regular.svg"),
-    include_str!("../assets/fluent-battery/ic_fluent_battery_10_24_regular.svg"),
-];
+mod fluent_icons {
+    include!(concat!(env!("OUT_DIR"), "/fluent_battery_icons.rs"));
+}
+
+const WIDTH: u32 = fluent_icons::TRAY_ICON_SIZE;
+const HEIGHT: u32 = fluent_icons::TRAY_ICON_SIZE;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct Color(u8, u8, u8, u8);
@@ -39,60 +28,30 @@ fn render_icon_bitmap(percent: Option<u8>) -> IconBitmap {
 }
 
 fn render_fluent_battery_icon(percent: u8) -> Option<IconBitmap> {
-    let svg = FLUENT_BATTERY_SVGS.get(fluent_battery_asset_index(percent))?;
-    render_fluent_svg(svg, level_color(percent))
+    let pixels = fluent_icons::fluent_battery_icon_rgba(
+        fluent_battery_asset_index(percent),
+        fluent_color_index(percent),
+    )?;
+
+    Some(IconBitmap {
+        pixels: pixels.to_vec(),
+        width: WIDTH,
+        height: HEIGHT,
+    })
 }
 
 fn fluent_battery_asset_index(percent: u8) -> usize {
     ((percent.min(100) as usize + 5) / 10).min(10)
 }
 
-fn render_fluent_svg(svg: &str, color: Color) -> Option<IconBitmap> {
-    use resvg::{tiny_skia, usvg};
-
-    let svg = svg.replace(FLUENT_FILL_COLOR, &svg_color(color));
-    let tree = usvg::Tree::from_str(&svg, &usvg::Options::default()).ok()?;
-    let mut pixmap = tiny_skia::Pixmap::new(WIDTH, HEIGHT)?;
-    let scale_x = WIDTH as f32 / tree.size().width();
-    let scale_y = HEIGHT as f32 / tree.size().height();
-
-    resvg::render(
-        &tree,
-        tiny_skia::Transform::from_scale(scale_x, scale_y),
-        &mut pixmap.as_mut(),
-    );
-
-    Some(IconBitmap {
-        pixels: unpremultiply_rgba(pixmap.data()),
-        width: WIDTH,
-        height: HEIGHT,
-    })
-}
-
-fn svg_color(Color(red, green, blue, _): Color) -> String {
-    format!("#{red:02X}{green:02X}{blue:02X}")
-}
-
-fn unpremultiply_rgba(pixels: &[u8]) -> Vec<u8> {
-    let mut output = Vec::with_capacity(pixels.len());
-
-    for pixel in pixels.chunks_exact(4) {
-        let alpha = pixel[3];
-        if alpha == 0 || alpha == 255 {
-            output.extend_from_slice(pixel);
-        } else {
-            output.push(unpremultiply_channel(pixel[0], alpha));
-            output.push(unpremultiply_channel(pixel[1], alpha));
-            output.push(unpremultiply_channel(pixel[2], alpha));
-            output.push(alpha);
-        }
+fn fluent_color_index(percent: u8) -> usize {
+    if percent <= 20 {
+        fluent_icons::COLOR_LOW
+    } else if percent <= 35 {
+        fluent_icons::COLOR_MEDIUM
+    } else {
+        fluent_icons::COLOR_NORMAL
     }
-
-    output
-}
-
-fn unpremultiply_channel(channel: u8, alpha: u8) -> u8 {
-    (((channel as u16 * 255) + (alpha as u16 / 2)) / alpha as u16).min(255) as u8
 }
 
 fn render_numeric_fallback_icon(percent: Option<u8>) -> IconBitmap {

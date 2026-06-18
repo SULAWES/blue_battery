@@ -6,6 +6,14 @@ const packageJson = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
 );
 const gitignore = readFileSync(new URL("../.gitignore", import.meta.url), "utf8");
+const cargoToml = readFileSync(
+  new URL("../src-tauri/Cargo.toml", import.meta.url),
+  "utf8",
+);
+const changelog = readFileSync(
+  new URL("../CHANGELOG.md", import.meta.url),
+  "utf8",
+);
 
 test("defines explicit release and demo packaging scripts", () => {
   assert.equal(packageJson.scripts["tauri:build:release"], "tauri build");
@@ -21,8 +29,28 @@ test("demo packaging script packages the release executable only", () => {
   assert.match(script, /target[\\/]release[\\/]blue-battery\.exe/);
   assert.doesNotMatch(script, /target[\\/]debug[\\/]blue-battery\.exe/);
   assert.match(script, /BlueBattery-demo-v/);
+  assert.match(script, /CHANGELOG\.md/);
 });
 
 test("generated demo packages stay out of git", () => {
   assert.match(gitignore, /^release\/$/m);
+});
+
+test("renders Fluent tray icons at build time instead of runtime", () => {
+  const buildDependencies = cargoToml.match(
+    /\[build-dependencies\]([\s\S]*?)(?:\n\[|$)/,
+  )?.[1] ?? "";
+  const runtimeDependencies = cargoToml.match(
+    /\[dependencies\]([\s\S]*?)(?:\n\[|$)/,
+  )?.[1] ?? "";
+
+  assert.match(buildDependencies, /^resvg\s*=/m);
+  assert.doesNotMatch(runtimeDependencies, /^resvg\s*=/m);
+});
+
+test("documents the 0.1.0 public release scope", () => {
+  assert.match(changelog, /## 0\.1\.0/);
+  assert.match(changelog, /portable zip/i);
+  assert.match(changelog, /标准 BLE Battery Service/);
+  assert.match(changelog, /不支持私有协议/);
 });

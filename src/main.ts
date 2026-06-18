@@ -59,6 +59,10 @@ app.innerHTML = `
             <span class="fluent-icon menu-check-glyph" aria-hidden="true">&#xE73E;</span>
             <span>开机自启动</span>
           </button>
+          <button id="menu-clear-startup" class="menu-item" type="button" role="menuitem">
+            <span class="fluent-icon menu-cleanup-glyph" aria-hidden="true">&#xE74D;</span>
+            <span>清理开机自启动项</span>
+          </button>
           <button id="menu-refresh" class="menu-item" type="button" role="menuitem">
             <span class="fluent-icon menu-refresh-glyph" aria-hidden="true">&#xE72C;</span>
             <span>刷新</span>
@@ -80,6 +84,7 @@ const footerStatusEl = document.querySelector<HTMLSpanElement>("#footer-status")
 const settingsButton = document.querySelector<HTMLButtonElement>("#settings")!;
 const settingsMenu = document.querySelector<HTMLDivElement>("#settings-menu")!;
 const startupMenuItem = document.querySelector<HTMLButtonElement>("#menu-startup")!;
+const clearStartupMenuItem = document.querySelector<HTMLButtonElement>("#menu-clear-startup")!;
 const refreshMenuItem = document.querySelector<HTMLButtonElement>("#menu-refresh")!;
 const diagnosticsMenuItem = document.querySelector<HTMLButtonElement>("#menu-diagnostics")!;
 const diagnosticsPanel = document.querySelector<HTMLElement>("#diagnostics-panel")!;
@@ -103,6 +108,10 @@ refreshMenuItem.addEventListener("click", () => {
 
 startupMenuItem.addEventListener("click", () => {
   void setStartupEnabled(!startupEnabled);
+});
+
+clearStartupMenuItem.addEventListener("click", () => {
+  void clearStartupEntry();
 });
 
 diagnosticsMenuItem.addEventListener("click", () => {
@@ -195,6 +204,7 @@ async function refreshStartupState() {
 
 async function setStartupEnabled(enabled: boolean) {
   startupMenuItem.disabled = true;
+  clearStartupMenuItem.disabled = true;
 
   try {
     setStartupState(await invoke<boolean>("set_startup_enabled", { enabled }));
@@ -203,6 +213,32 @@ async function setStartupEnabled(enabled: boolean) {
     footerStatusEl.textContent = "更新开机自启动失败";
   } finally {
     startupMenuItem.disabled = false;
+    clearStartupMenuItem.disabled = false;
+  }
+}
+
+async function clearStartupEntry() {
+  const confirmed = window.confirm(
+    "删除 Blue Battery 写入的开机自启动注册表项？这不会删除应用文件，也不会影响当前运行。",
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  startupMenuItem.disabled = true;
+  clearStartupMenuItem.disabled = true;
+
+  try {
+    const removed = await invoke<boolean>("clear_startup_entry");
+    setStartupState(false);
+    footerStatusEl.textContent = removed ? "已清理开机自启动项" : "未发现开机自启动项";
+    setSettingsMenuOpen(false);
+  } catch {
+    footerStatusEl.textContent = "清理开机自启动项失败";
+  } finally {
+    startupMenuItem.disabled = false;
+    clearStartupMenuItem.disabled = false;
   }
 }
 

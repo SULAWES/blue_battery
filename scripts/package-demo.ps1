@@ -33,6 +33,11 @@ if (Test-Path -LiteralPath $readmePath) {
     Copy-Item -LiteralPath $readmePath -Destination (Join-Path $stagingDir "README.md")
 }
 
+$changelogPath = Join-Path $root "CHANGELOG.md"
+if (Test-Path -LiteralPath $changelogPath) {
+    Copy-Item -LiteralPath $changelogPath -Destination (Join-Path $stagingDir "CHANGELOG.md")
+}
+
 $fluentLicensePath = Join-Path $root "src-tauri\assets\fluent-battery\LICENSE"
 if (Test-Path -LiteralPath $fluentLicensePath) {
     @"

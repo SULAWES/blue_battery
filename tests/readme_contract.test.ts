@@ -23,3 +23,9 @@ test("README documents tray controls and troubleshooting basics", () => {
   assert.match(readme, /诊断信息/);
   assert.match(readme, /不显示设备/);
 });
+
+test("README documents startup registry cleanup for portable release users", () => {
+  assert.match(readme, /HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run/);
+  assert.match(readme, /Blue Battery/);
+  assert.match(readme, /清理开机自启动项/);
+});

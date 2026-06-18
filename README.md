@@ -27,10 +27,21 @@ Blue Battery 是一个轻量 Windows 托盘工具，用来显示当前连接的�
 
 - 左键点击托盘图标：打开或关闭面板。
 - 右键点击托盘图标：打开菜单，可刷新或退出。
-- 面板右下角齿轮：开机自启动、刷新、诊断信息。
+- 面板右下角齿轮：开机自启动、清理开机自启动项、刷新、诊断信息。
 - `Esc`：关闭当前面板或面板内的浮层。
 
 如果设备没有显示，先确认 Windows 设置页里是否能看到该设备电量。Blue Battery 只显示 Windows 能读取到的标准电量。
+
+## 开机自启动和注册表
+
+开机自启动默认关闭。启用后，Blue Battery 只写入当前用户的 Run 项：
+
+```text
+HKCU\Software\Microsoft\Windows\CurrentVersion\Run
+Value name: Blue Battery
+```
+
+关闭开机自启动会删除这个 `Blue Battery` 值。portable 版本移动或删除后，如果担心留下旧路径，可以在面板右下角齿轮中选择“清理开机自启动项”。该操作只删除 `Blue Battery` 这个 Run 值，不删除应用文件，也不影响其他应用。
 
 ## Demo 构建
 
@@ -53,6 +64,14 @@ src-tauri/target/release/blue-battery.exe
 ```
 
 不要把 `src-tauri/target/debug/blue-battery.exe` 作为 demo 发给别人。debug 版本会显示控制台窗口，release 版本使用 Windows GUI 子系统。
+
+demo zip 会包含：
+
+- `blue-battery.exe`
+- `README.md`
+- `CHANGELOG.md`
+- `DEMO_NOTES.txt`
+- `THIRD_PARTY_NOTICES.txt`
 
 ## 故障排查
 
