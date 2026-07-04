@@ -1,15 +1,13 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::{
-    sync::{
-        Mutex,
-        atomic::{AtomicBool, Ordering},
-    },
-    time::Duration,
+use std::sync::{
+    Mutex,
+    atomic::{AtomicBool, Ordering},
 };
 
 use bluetooth::RefreshResult;
 use diagnostics::{Diagnostics, RefreshSource};
+use settings::AppSettings;
 use single_instance::InstanceClaim;
 use tauri::{AppHandle, Emitter, Manager, tray::TrayIcon};
 
@@ -17,12 +15,11 @@ mod bluetooth;
 mod diagnostics;
 mod panel_position;
 mod panel_window;
+mod settings;
 mod single_instance;
 mod startup;
 mod tray;
 mod tray_icon;
-
-const AUTO_REFRESH_INTERVAL: Duration = Duration::from_secs(60);
 
 #[derive(Default)]
 struct AppState {
@@ -30,6 +27,7 @@ struct AppState {
     single_instance: Mutex<Option<single_instance::InstanceGuard>>,
     latest: Mutex<Option<RefreshResult>>,
     diagnostics: Mutex<Diagnostics>,
+    settings: Mutex<AppSettings>,
     background_refresh_running: AtomicBool,
 }
 
@@ -62,6 +60,46 @@ async fn refresh_devices(app: AppHandle) -> Result<RefreshResult, String> {
 #[tauri::command]
 fn get_diagnostics_report(app: AppHandle) -> Result<String, String> {
     diagnostics_report(&app)
+}
+
+#[tauri::command]
+fn get_settings(app: AppHandle) -> Result<AppSettings, String> {
+    load_settings_into_state(&app)
+}
+
+#[tauri::command]
+fn update_settings(app: AppHandle, settings: AppSettings) -> Result<AppSettings, String> {
+    let settings = settings::save(&app, &settings).map_err(|error| {
+        record_diagnostic_event(&app, format!("settings update failed: {error}"));
+        error
+    })?;
+
+    store_settings(&app, settings.clone())?;
+    record_diagnostic_event(
+        &app,
+        format!(
+            "settings updated: refresh_interval_seconds={} low_battery_status_enabled={} low_battery_threshold={} show_panel_on_startup={}",
+            settings.refresh_interval_seconds,
+            settings.low_battery_status_enabled,
+            settings.low_battery_threshold,
+            settings.show_panel_on_startup
+        ),
+    );
+    refresh_latest_tray_state(&app)?;
+    Ok(settings)
+}
+
+#[tauri::command]
+fn reset_settings(app: AppHandle) -> Result<AppSettings, String> {
+    let settings = settings::reset(&app).map_err(|error| {
+        record_diagnostic_event(&app, format!("settings reset failed: {error}"));
+        error
+    })?;
+
+    store_settings(&app, settings.clone())?;
+    record_diagnostic_event(&app, "settings reset");
+    refresh_latest_tray_state(&app)?;
+    Ok(settings)
 }
 
 #[tauri::command]
@@ -125,6 +163,13 @@ fn main() {
 
             let app_handle = app.handle().clone();
             record_diagnostic_event(&app_handle, "app started");
+            let settings = load_settings_into_state(&app_handle)
+                .map_err(|error| tauri::Error::Anyhow(anyhow::anyhow!(error)))?;
+
+            if settings.show_panel_on_startup {
+                let _ = panel_window::show(&app_handle, None);
+            }
+
             refresh_in_background(app_handle.clone());
             start_auto_refresh(app_handle)?;
 
@@ -133,6 +178,9 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             refresh_devices,
             get_diagnostics_report,
+            get_settings,
+            update_settings,
+            reset_settings,
             get_startup_enabled,
             set_startup_enabled,
             clear_startup_entry,
@@ -160,7 +208,7 @@ fn start_auto_refresh(app: AppHandle) -> tauri::Result<()> {
         .name("blue-battery-refresh".to_string())
         .spawn(move || {
             loop {
-                std::thread::sleep(AUTO_REFRESH_INTERVAL);
+                std::thread::sleep(current_settings(&app).refresh_interval());
                 refresh_in_background(app.clone());
             }
         })
@@ -208,6 +256,50 @@ fn finish_background_refresh(running: &AtomicBool) {
     running.store(false, Ordering::Release);
 }
 
+fn load_settings_into_state(app: &AppHandle) -> Result<AppSettings, String> {
+    let outcome = settings::load(app)?;
+    for event in &outcome.diagnostics {
+        record_diagnostic_event(app, event);
+    }
+    store_settings(app, outcome.settings.clone())?;
+    Ok(outcome.settings)
+}
+
+fn store_settings(app: &AppHandle, settings: AppSettings) -> Result<(), String> {
+    let state = app.state::<AppState>();
+    *state
+        .settings
+        .lock()
+        .map_err(|_| "settings state lock poisoned".to_string())? = settings;
+    Ok(())
+}
+
+fn current_settings(app: &AppHandle) -> AppSettings {
+    let state = app.state::<AppState>();
+    state
+        .settings
+        .lock()
+        .map(|settings| settings.clone())
+        .unwrap_or_default()
+}
+
+fn refresh_latest_tray_state(app: &AppHandle) -> Result<(), String> {
+    let latest = {
+        let state = app.state::<AppState>();
+        state
+            .latest
+            .lock()
+            .map_err(|_| "latest state lock poisoned".to_string())?
+            .clone()
+    };
+
+    if let Some(result) = latest {
+        apply_refresh_result(app, &result)?;
+    }
+
+    Ok(())
+}
+
 fn apply_refresh_result(app: &AppHandle, result: &RefreshResult) -> Result<(), String> {
     let state = app.state::<AppState>();
 
@@ -227,9 +319,10 @@ fn apply_refresh_result(app: &AppHandle, result: &RefreshResult) -> Result<(), S
             .iter()
             .map(|device| device.battery_percent)
             .min();
+        let settings = current_settings(app);
         tray.set_icon(Some(tray_icon::render_battery_icon(lowest)))
             .map_err(|error| format!("Failed to update tray icon: {error}"))?;
-        tray.set_tooltip(Some(tray::build_tooltip(result)))
+        tray.set_tooltip(Some(tray::build_tooltip(result, &settings)))
             .map_err(|error| format!("Failed to update tray tooltip: {error}"))?;
     }
 
@@ -283,8 +376,10 @@ mod tests {
     }
 
     #[test]
-    fn automatic_refresh_interval_stays_lightweight() {
-        assert!(AUTO_REFRESH_INTERVAL.as_secs() >= 30);
-        assert!(AUTO_REFRESH_INTERVAL.as_secs() <= 60);
+    fn default_automatic_refresh_interval_stays_lightweight() {
+        let interval = AppSettings::default().refresh_interval();
+
+        assert!(interval.as_secs() >= 30);
+        assert!(interval.as_secs() <= 60);
     }
 }

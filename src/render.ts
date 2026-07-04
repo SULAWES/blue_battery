@@ -12,19 +12,27 @@ export type PanelView = {
   footerStatus: string;
 };
 
-const LOW_BATTERY_THRESHOLD = 20;
+export type PanelRenderSettings = {
+  lowBatteryStatusEnabled?: boolean;
+  lowBatteryThreshold?: number;
+};
 
-export function buildPanelView(result: RefreshResult): PanelView {
+const DEFAULT_LOW_BATTERY_THRESHOLD = 20;
+
+export function buildPanelView(
+  result: RefreshResult,
+  settings: PanelRenderSettings = {},
+): PanelView {
   const state = describePanelState(result, false);
 
   return {
     summary: `上次更新 ${formatTime(result.refreshed_at_ms)}`,
     contentHtml:
       state.kind === "devices"
-        ? renderDeviceList(result.devices, result.errors)
+        ? renderDeviceList(result.devices, result.errors, settings)
         : `${renderMessageStateHtml(state)}${renderErrors(result.errors)}`,
     connectedBadge: formatConnectedBadge(result.connected_le_device_count),
-    footerStatus: formatFooterStatus(result.devices),
+    footerStatus: formatFooterStatus(result.devices, settings),
   };
 }
 
@@ -56,10 +64,14 @@ export function buildCommandErrorView(
   };
 }
 
-function renderDeviceList(devices: DeviceBatteryInfo[], errors: string[]) {
+function renderDeviceList(
+  devices: DeviceBatteryInfo[],
+  errors: string[],
+  settings: PanelRenderSettings,
+) {
   return `
       <div class="device-list">
-        ${devices.map(renderDevice).join("")}
+        ${devices.map((device) => renderDevice(device, settings)).join("")}
       </div>
       ${renderErrors(errors)}
     `;
@@ -78,9 +90,10 @@ function renderMessageStateHtml(state: PanelState) {
   `;
 }
 
-function renderDevice(device: DeviceBatteryInfo) {
+function renderDevice(device: DeviceBatteryInfo, settings: PanelRenderSettings) {
   const percent = Math.max(0, Math.min(100, device.battery_percent));
-  const level = percent <= 20 ? "low" : percent <= 35 ? "mid" : "high";
+  const lowThreshold = settings.lowBatteryThreshold ?? DEFAULT_LOW_BATTERY_THRESHOLD;
+  const level = percent <= lowThreshold ? "low" : percent <= 35 ? "mid" : "high";
 
   return `
     <article class="device-row">
@@ -122,9 +135,14 @@ function formatConnectedBadge(count: number) {
   return `${Math.max(0, count)} BLE`;
 }
 
-function formatFooterStatus(devices: DeviceBatteryInfo[]) {
+function formatFooterStatus(devices: DeviceBatteryInfo[], settings: PanelRenderSettings) {
+  if (settings.lowBatteryStatusEnabled === false) {
+    return "就绪";
+  }
+
+  const lowThreshold = settings.lowBatteryThreshold ?? DEFAULT_LOW_BATTERY_THRESHOLD;
   const lowDevice = devices
-    .filter((device) => device.battery_percent <= LOW_BATTERY_THRESHOLD)
+    .filter((device) => device.battery_percent <= lowThreshold)
     .sort((left, right) => left.battery_percent - right.battery_percent)[0];
 
   return lowDevice

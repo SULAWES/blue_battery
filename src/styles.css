@@ -140,6 +140,30 @@ button {
   font-size: 14px;
 }
 
+.menu-interval-glyph {
+  color: var(--win-icon);
+  font-size: 14px;
+}
+
+.menu-low-battery-glyph {
+  color: var(--win-icon);
+  font-size: 14px;
+}
+
+.menu-threshold-glyph {
+  color: var(--win-icon);
+  font-size: 14px;
+}
+
+.menu-reset-glyph {
+  color: var(--win-icon);
+  font-size: 14px;
+}
+
+.menu-item[aria-checked="true"] .menu-low-battery-glyph {
+  color: var(--win-accent);
+}
+
 .menu-diagnostics-glyph {
   color: var(--win-icon);
   font-size: 14px;
@@ -402,7 +426,7 @@ button {
   position: absolute;
   right: 0;
   bottom: 32px;
-  min-width: 168px;
+  min-width: 188px;
   padding: 4px;
   border: 1px solid var(--win-border-strong);
   border-radius: 6px;

@@ -161,6 +161,7 @@ dependencies = [
  "anyhow",
  "resvg",
  "serde",
+ "serde_json",
  "tauri",
  "tauri-build",
  "windows 0.62.2",

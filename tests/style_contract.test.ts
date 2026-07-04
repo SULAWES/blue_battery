@@ -57,6 +57,7 @@ test("uses Segoe Fluent Icons for in-panel iconography", () => {
   assert.match(block(".settings-glyph"), /color:\s*var\(--win-icon\)/);
   assert.match(block(".settings-glyph"), /font-size:\s*16px/);
   assert.match(block(".menu-refresh-glyph"), /font-size:\s*14px/);
+  assert.match(block(".menu-interval-glyph"), /font-size:\s*14px/);
 });
 
 test("places status and settings affordance in the footer", () => {
@@ -78,13 +79,14 @@ test("uses a compact diagnostics flyout inside the panel", () => {
 });
 
 test("uses readable single-line settings menu items", () => {
-  assert.match(block(".settings-menu"), /min-width:\s*168px/);
+  assert.match(block(".settings-menu"), /min-width:\s*188px/);
   assert.match(block(".menu-item"), /justify-content:\s*flex-start/);
-  assert.match(block(".menu-item span:last-child"), /white-space:\s*nowrap/);
+  assert.match(css, /\.menu-item\s+span:last-child\s*\{[^}]*white-space:\s*nowrap/s);
 });
 
 test("uses a visible startup icon with enabled-state emphasis", () => {
   assert.match(block(".menu-startup-glyph"), /font-size:\s*14px/);
+  assert.match(block(".menu-startup-glyph"), /color:\s*var\(--win-icon\)/);
   assert.match(
     css,
     /\.menu-item\[aria-checked="true"\]\s+\.menu-startup-glyph\s*\{[^}]*color:\s*var\(--win-accent\)/s,

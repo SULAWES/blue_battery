@@ -34,6 +34,14 @@ test("exposes startup registry cleanup from the settings menu", () => {
   assert.match(source, /clear_startup_entry/);
   assert.match(source, /清理开机自启动项/);
 });
+test("loads and updates persisted user settings", () => {
+  assert.match(source, /get_settings/);
+  assert.match(source, /update_settings/);
+  assert.match(source, /reset_settings/);
+  assert.match(source, /refreshIntervalSeconds/);
+  assert.match(source, /lowBatteryThreshold/);
+  assert.doesNotMatch(source, /60_000/);
+});
 
 test("closes the panel with Escape when no inner flyout is open", () => {
   assert.match(source, /hide_panel/);

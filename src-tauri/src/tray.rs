@@ -1,11 +1,9 @@
-use crate::{bluetooth::RefreshResult, panel_window, tray_icon};
+use crate::{bluetooth::RefreshResult, panel_window, settings::AppSettings, tray_icon};
 use tauri::{
     App, AppHandle,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent},
 };
-
-const LOW_BATTERY_THRESHOLD: u8 = 20;
 
 pub fn setup(app: &mut App, refresh: fn(AppHandle)) -> tauri::Result<TrayIcon> {
     let open_item = MenuItem::with_id(app, "open", "打开面板", true, None::<&str>)?;
@@ -43,7 +41,7 @@ pub fn setup(app: &mut App, refresh: fn(AppHandle)) -> tauri::Result<TrayIcon> {
         .build(app)
 }
 
-pub fn build_tooltip(result: &RefreshResult) -> String {
+pub fn build_tooltip(result: &RefreshResult, settings: &AppSettings) -> String {
     if result.devices.is_empty() {
         if !result.errors.is_empty() {
             return "Blue Battery: 读取失败，稍后重试".to_string();
@@ -62,7 +60,10 @@ pub fn build_tooltip(result: &RefreshResult) -> String {
     if let Some(device) = result
         .devices
         .iter()
-        .filter(|device| device.battery_percent <= LOW_BATTERY_THRESHOLD)
+        .filter(|device| {
+            settings.low_battery_status_enabled
+                && device.battery_percent <= settings.low_battery_threshold
+        })
         .min_by_key(|device| device.battery_percent)
     {
         return format!(
@@ -113,7 +114,10 @@ mod tests {
     fn build_tooltip_reports_no_connected_devices() {
         let result = refresh_result(Vec::new(), 0, Vec::new());
 
-        assert_eq!(build_tooltip(&result), "Blue Battery: 没有已连接 BLE 设备");
+        assert_eq!(
+            build_tooltip(&result, &AppSettings::default()),
+            "Blue Battery: 没有已连接 BLE 设备"
+        );
     }
 
     #[test]
@@ -121,7 +125,7 @@ mod tests {
         let result = refresh_result(Vec::new(), 2, Vec::new());
 
         assert_eq!(
-            build_tooltip(&result),
+            build_tooltip(&result, &AppSettings::default()),
             "Blue Battery: 2 个已连接 BLE 设备，没有标准电量"
         );
     }
@@ -131,7 +135,7 @@ mod tests {
         let result = refresh_result(vec![device("Keychron Z6 Ultra 8K", 48)], 1, Vec::new());
 
         assert_eq!(
-            build_tooltip(&result),
+            build_tooltip(&result, &AppSettings::default()),
             "Blue Battery: Keychron Z6 Ultra 8K: 48%"
         );
     }
@@ -141,8 +145,35 @@ mod tests {
         let result = refresh_result(vec![device("Keychron Z6 Ultra 8K", 18)], 1, Vec::new());
 
         assert_eq!(
-            build_tooltip(&result),
+            build_tooltip(&result, &AppSettings::default()),
             "Blue Battery: 低电量：Keychron Z6 Ultra 8K: 18%"
+        );
+    }
+    #[test]
+    fn build_tooltip_uses_settings_threshold() {
+        let result = refresh_result(vec![device("Keychron Z6 Ultra 8K", 18)], 1, Vec::new());
+        let settings = crate::settings::AppSettings {
+            low_battery_threshold: 15,
+            ..crate::settings::AppSettings::default()
+        };
+
+        assert_eq!(
+            build_tooltip(&result, &settings),
+            "Blue Battery: Keychron Z6 Ultra 8K: 18%"
+        );
+    }
+
+    #[test]
+    fn build_tooltip_can_hide_low_battery_warning() {
+        let result = refresh_result(vec![device("Keychron Z6 Ultra 8K", 18)], 1, Vec::new());
+        let settings = crate::settings::AppSettings {
+            low_battery_status_enabled: false,
+            ..crate::settings::AppSettings::default()
+        };
+
+        assert_eq!(
+            build_tooltip(&result, &settings),
+            "Blue Battery: Keychron Z6 Ultra 8K: 18%"
         );
     }
 
@@ -155,6 +186,9 @@ mod tests {
             errors: vec!["Keyboard: HRESULT 0x80070490".to_string()],
         };
 
-        assert_eq!(build_tooltip(&result), "Blue Battery: 读取失败，稍后重试");
+        assert_eq!(
+            build_tooltip(&result, &AppSettings::default()),
+            "Blue Battery: 读取失败，稍后重试"
+        );
     }
 }
