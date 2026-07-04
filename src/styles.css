@@ -150,13 +150,13 @@ button {
   font-size: 14px;
 }
 
-.menu-check-glyph {
+.menu-startup-glyph {
   color: var(--win-icon);
   font-size: 14px;
 }
 
-.menu-item[aria-checked="false"] .menu-check-glyph {
-  opacity: 0;
+.menu-item[aria-checked="true"] .menu-startup-glyph {
+  color: var(--win-accent);
 }
 
 .content {
@@ -402,7 +402,7 @@ button {
   position: absolute;
   right: 0;
   bottom: 32px;
-  min-width: 128px;
+  min-width: 168px;
   padding: 4px;
   border: 1px solid var(--win-border-strong);
   border-radius: 6px;
@@ -420,6 +420,7 @@ button {
   height: 32px;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 9px;
   padding: 0 10px;
   border: 0;
@@ -427,6 +428,10 @@ button {
   color: var(--win-text);
   background: transparent;
   cursor: pointer;
+}
+
+.menu-item span:last-child {
+  white-space: nowrap;
 }
 
 .menu-item:hover {

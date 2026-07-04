@@ -56,7 +56,7 @@ app.innerHTML = `
         </button>
         <div id="settings-menu" class="settings-menu" role="menu" hidden>
           <button id="menu-startup" class="menu-item" type="button" role="menuitemcheckbox" aria-checked="false">
-            <span class="fluent-icon menu-check-glyph" aria-hidden="true">&#xE73E;</span>
+            <span class="fluent-icon menu-startup-glyph" aria-hidden="true">&#xE7E8;</span>
             <span>开机自启动</span>
           </button>
           <button id="menu-clear-startup" class="menu-item" type="button" role="menuitem">
