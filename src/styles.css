@@ -190,10 +190,6 @@ button {
   font-size: 14px;
 }
 
-.menu-item[aria-checked="true"] .menu-low-battery-glyph {
-  color: var(--win-accent);
-}
-
 .menu-diagnostics-glyph {
   color: var(--win-icon);
   font-size: 14px;
@@ -207,14 +203,6 @@ button {
 .menu-startup-glyph {
   color: var(--win-icon);
   font-size: 14px;
-}
-
-.menu-item[aria-checked="true"] .menu-startup-glyph {
-  color: var(--win-accent);
-}
-
-.menu-item[aria-checked="true"] .menu-panel-glyph {
-  color: var(--win-accent);
 }
 
 .content {
@@ -521,9 +509,11 @@ button {
   color: var(--win-text);
   background: transparent;
   cursor: pointer;
+  text-align: left;
 }
 
 .menu-text {
+  justify-self: start;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

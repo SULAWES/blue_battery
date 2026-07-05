@@ -81,16 +81,20 @@ test("uses a compact diagnostics flyout inside the panel", () => {
 test("uses readable single-line settings menu items", () => {
   assert.match(block(".settings-menu"), /min-width:\s*220px/);
   assert.match(block(".menu-item"), /justify-content:\s*flex-start/);
+  assert.match(block(".menu-item"), /text-align:\s*left/);
+  assert.match(block(".menu-text"), /justify-self:\s*start/);
   assert.match(block(".menu-text"), /white-space:\s*nowrap/);
 });
 
-test("uses a visible startup icon with enabled-state emphasis", () => {
-  assert.match(block(".menu-startup-glyph"), /font-size:\s*14px/);
-  assert.match(block(".menu-startup-glyph"), /color:\s*var\(--win-icon\)/);
-  assert.match(
-    css,
-    /\.menu-item\[aria-checked="true"\]\s+\.menu-startup-glyph\s*\{[^}]*color:\s*var\(--win-accent\)/s,
-  );
+test("keeps function icons neutral and uses checkmarks for selected menu states", () => {
+  for (const selector of [".menu-low-battery-glyph", ".menu-startup-glyph", ".menu-panel-glyph"]) {
+    assert.match(block(selector), /color:\s*var\(--win-icon\)/);
+  }
+
+  assert.doesNotMatch(css, /\.menu-item\[aria-checked="true"\]\s+\.menu-low-battery-glyph/);
+  assert.doesNotMatch(css, /\.menu-item\[aria-checked="true"\]\s+\.menu-startup-glyph/);
+  assert.doesNotMatch(css, /\.menu-item\[aria-checked="true"\]\s+\.menu-panel-glyph/);
+  assert.match(block(".menu-check"), /color:\s*var\(--win-accent\)/);
 });
 
 test("styles switched submenu views with back, chevron, check, and metadata affordances", () => {

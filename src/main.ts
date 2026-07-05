@@ -142,11 +142,11 @@ app.innerHTML = `
               <span>低电量提醒</span>
             </button>
             <button id="menu-low-battery-status" class="menu-item" type="button" role="menuitemcheckbox" aria-checked="true">
-              <span class="fluent-icon menu-low-battery-glyph" aria-hidden="true">&#xE7BA;</span>
+              <span class="fluent-icon menu-check" aria-hidden="true">&#xE73E;</span>
               <span class="menu-text">显示低电量状态</span>
             </button>
             <button id="menu-low-battery-system-notification" class="menu-item" type="button" role="menuitemcheckbox" aria-checked="false" disabled>
-              <span class="fluent-icon menu-notification-glyph" aria-hidden="true">&#xE7F4;</span>
+              <span class="fluent-icon menu-check" aria-hidden="true">&#xE73E;</span>
               <span class="menu-text">系统通知</span>
               <span class="menu-value">后续</span>
             </button>
@@ -187,11 +187,11 @@ app.innerHTML = `
               <span>启动设置</span>
             </button>
             <button id="menu-startup" class="menu-item" type="button" role="menuitemcheckbox" aria-checked="false">
-              <span class="fluent-icon menu-startup-glyph" aria-hidden="true">&#xE7E8;</span>
+              <span class="fluent-icon menu-check" aria-hidden="true">&#xE73E;</span>
               <span class="menu-text">开机自启动</span>
             </button>
             <button id="menu-show-panel-on-startup" class="menu-item" type="button" role="menuitemcheckbox" aria-checked="false">
-              <span class="fluent-icon menu-panel-glyph" aria-hidden="true">&#xE8A7;</span>
+              <span class="fluent-icon menu-check" aria-hidden="true">&#xE73E;</span>
               <span class="menu-text">启动时显示面板</span>
             </button>
             <button id="menu-clear-startup" class="menu-item" type="button" role="menuitem">

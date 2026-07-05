@@ -59,6 +59,21 @@ test("uses explicit submenu choices for refresh interval and low battery thresho
   assert.doesNotMatch(source, /nextNumberOption/);
 });
 
+test("uses checkmarks for checkbox and radio menu states", () => {
+  assert.match(
+    source,
+    /id="menu-low-battery-status"[\s\S]*?<span class="fluent-icon menu-check"/,
+  );
+  assert.match(
+    source,
+    /id="menu-startup"[\s\S]*?<span class="fluent-icon menu-check"/,
+  );
+  assert.match(
+    source,
+    /id="menu-show-panel-on-startup"[\s\S]*?<span class="fluent-icon menu-check"/,
+  );
+});
+
 test("exposes startup preference, diagnostics copy, about, reset, and exit actions", () => {
   assert.match(source, /id="menu-show-panel-on-startup"/);
   assert.match(source, /showPanelOnStartup/);
