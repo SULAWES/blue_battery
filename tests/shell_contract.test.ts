@@ -34,6 +34,44 @@ test("exposes startup registry cleanup from the settings menu", () => {
   assert.match(source, /clear_startup_entry/);
   assert.match(source, /清理开机自启动项/);
 });
+
+test("organizes settings into main and secondary menu views", () => {
+  assert.match(source, /id="settings-menu-main"/);
+  assert.match(source, /id="settings-menu-refresh"/);
+  assert.match(source, /id="settings-menu-low-battery"/);
+  assert.match(source, /id="settings-menu-threshold"/);
+  assert.match(source, /id="settings-menu-startup"/);
+  assert.match(source, /id="settings-menu-diagnostics"/);
+  assert.match(source, /id="settings-menu-about"/);
+  assert.match(source, /data-menu-view/);
+  assert.match(source, /settingsMenuViewStack/);
+});
+
+test("uses explicit submenu choices for refresh interval and low battery threshold", () => {
+  for (const seconds of [120, 60, 30]) {
+    assert.match(source, new RegExp(`id="menu-refresh-interval-${seconds}"`));
+  }
+
+  for (const threshold of [10, 15, 20, 25]) {
+    assert.match(source, new RegExp(`id="menu-low-battery-threshold-${threshold}"`));
+  }
+
+  assert.doesNotMatch(source, /nextNumberOption/);
+});
+
+test("exposes startup preference, diagnostics copy, about, reset, and exit actions", () => {
+  assert.match(source, /id="menu-show-panel-on-startup"/);
+  assert.match(source, /showPanelOnStartup/);
+  assert.match(source, /id="menu-copy-diagnostics"/);
+  assert.match(source, /id="menu-copy-device-summary"/);
+  assert.match(source, /copyTextToClipboard/);
+  assert.match(source, /id="menu-about-version"/);
+  assert.match(source, /get_app_version/);
+  assert.match(source, /id="menu-reset-settings"/);
+  assert.match(source, /id="menu-exit"/);
+  assert.match(source, /exit_app/);
+});
+
 test("loads and updates persisted user settings", () => {
   assert.match(source, /get_settings/);
   assert.match(source, /update_settings/);
@@ -47,4 +85,5 @@ test("closes the panel with Escape when no inner flyout is open", () => {
   assert.match(source, /hide_panel/);
   assert.match(source, /invoke\s*<\s*void\s*>\("hide_panel"\)/);
   assert.match(source, /event\.key\s*===\s*"Escape"/);
+  assert.match(source, /backSettingsMenuView\(\)/);
 });

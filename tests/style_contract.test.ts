@@ -79,9 +79,9 @@ test("uses a compact diagnostics flyout inside the panel", () => {
 });
 
 test("uses readable single-line settings menu items", () => {
-  assert.match(block(".settings-menu"), /min-width:\s*188px/);
+  assert.match(block(".settings-menu"), /min-width:\s*220px/);
   assert.match(block(".menu-item"), /justify-content:\s*flex-start/);
-  assert.match(css, /\.menu-item\s+span:last-child\s*\{[^}]*white-space:\s*nowrap/s);
+  assert.match(block(".menu-text"), /white-space:\s*nowrap/);
 });
 
 test("uses a visible startup icon with enabled-state emphasis", () => {
@@ -90,5 +90,18 @@ test("uses a visible startup icon with enabled-state emphasis", () => {
   assert.match(
     css,
     /\.menu-item\[aria-checked="true"\]\s+\.menu-startup-glyph\s*\{[^}]*color:\s*var\(--win-accent\)/s,
+  );
+});
+
+test("styles switched submenu views with back, chevron, check, and metadata affordances", () => {
+  assert.match(block(".settings-menu-view"), /display:\s*grid/);
+  assert.match(block(".settings-menu-header"), /height:\s*32px/);
+  assert.match(block(".menu-back"), /grid-template-columns:\s*16px minmax\(0,\s*1fr\)/);
+  assert.match(block(".menu-chevron"), /justify-self:\s*end/);
+  assert.match(block(".menu-check"), /font-size:\s*14px/);
+  assert.match(block(".menu-value"), /color:\s*var\(--win-text-tertiary\)/);
+  assert.match(
+    css,
+    /\.menu-item\[aria-checked="false"\]\s+\.menu-check\s*\{[^}]*opacity:\s*0/s,
   );
 });

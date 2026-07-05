@@ -63,6 +63,11 @@ fn get_diagnostics_report(app: AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn get_app_version() -> &'static str {
+    env!("CARGO_PKG_VERSION")
+}
+
+#[tauri::command]
 fn get_settings(app: AppHandle) -> Result<AppSettings, String> {
     load_settings_into_state(&app)
 }
@@ -140,6 +145,12 @@ fn hide_panel(app: AppHandle) -> Result<(), String> {
     panel_window::hide(&app).map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn exit_app(app: AppHandle) {
+    record_diagnostic_event(&app, "exit requested");
+    app.exit(0);
+}
+
 fn main() {
     let instance_guard = match single_instance::claim_or_signal_existing()
         .expect("failed to initialize single-instance guard")
@@ -178,13 +189,15 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             refresh_devices,
             get_diagnostics_report,
+            get_app_version,
             get_settings,
             update_settings,
             reset_settings,
             get_startup_enabled,
             set_startup_enabled,
             clear_startup_entry,
-            hide_panel
+            hide_panel,
+            exit_app
         ])
         .run(tauri::generate_context!())
         .expect("error while running Blue Battery");

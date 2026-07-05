@@ -29,3 +29,12 @@ test("README documents startup registry cleanup for portable release users", () 
   assert.match(readme, /Blue Battery/);
   assert.match(readme, /清理开机自启动项/);
 });
+
+test("README documents the completed panel settings menu", () => {
+  assert.match(readme, /刷新频率/);
+  assert.match(readme, /低电量阈值/);
+  assert.match(readme, /启动时显示面板/);
+  assert.match(readme, /复制诊断信息/);
+  assert.match(readme, /关于 Blue Battery/);
+  assert.match(readme, /退出/);
+});

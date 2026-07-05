@@ -160,6 +160,36 @@ button {
   font-size: 14px;
 }
 
+.menu-about-glyph {
+  color: var(--win-icon);
+  font-size: 14px;
+}
+
+.menu-exit-glyph {
+  color: var(--win-icon);
+  font-size: 14px;
+}
+
+.menu-view-glyph {
+  color: var(--win-icon);
+  font-size: 14px;
+}
+
+.menu-copy-glyph {
+  color: var(--win-icon);
+  font-size: 14px;
+}
+
+.menu-panel-glyph {
+  color: var(--win-icon);
+  font-size: 14px;
+}
+
+.menu-notification-glyph {
+  color: var(--win-icon);
+  font-size: 14px;
+}
+
 .menu-item[aria-checked="true"] .menu-low-battery-glyph {
   color: var(--win-accent);
 }
@@ -180,6 +210,10 @@ button {
 }
 
 .menu-item[aria-checked="true"] .menu-startup-glyph {
+  color: var(--win-accent);
+}
+
+.menu-item[aria-checked="true"] .menu-panel-glyph {
   color: var(--win-accent);
 }
 
@@ -426,7 +460,7 @@ button {
   position: absolute;
   right: 0;
   bottom: 32px;
-  min-width: 188px;
+  min-width: 220px;
   padding: 4px;
   border: 1px solid var(--win-border-strong);
   border-radius: 6px;
@@ -439,10 +473,45 @@ button {
   display: none;
 }
 
+.settings-menu-view {
+  display: grid;
+  gap: 2px;
+}
+
+.settings-menu-view[hidden] {
+  display: none;
+}
+
+.settings-menu-header {
+  height: 32px;
+  color: var(--win-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.menu-back {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.menu-back:hover {
+  background: var(--win-card-hover);
+}
+
 .menu-item {
   width: 100%;
   height: 32px;
-  display: flex;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto auto;
   align-items: center;
   justify-content: flex-start;
   gap: 9px;
@@ -454,8 +523,40 @@ button {
   cursor: pointer;
 }
 
-.menu-item span:last-child {
+.menu-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.menu-value {
+  color: var(--win-text-tertiary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.menu-chevron {
+  justify-self: end;
+  color: var(--win-text-tertiary);
+  font-size: 12px;
+}
+
+.menu-check {
+  color: var(--win-accent);
+  font-size: 14px;
+}
+
+.menu-item[aria-checked="false"] .menu-check {
+  opacity: 0;
+}
+
+.menu-info-item {
+  min-height: 32px;
+  padding: 7px 10px;
+  color: var(--win-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
 }
 
 .menu-item:hover {
@@ -465,4 +566,9 @@ button {
 .menu-item:disabled {
   color: var(--win-text-tertiary);
   cursor: default;
+}
+
+.menu-item:disabled .fluent-icon,
+.menu-item:disabled .menu-value {
+  color: var(--win-text-tertiary);
 }
