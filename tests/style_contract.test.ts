@@ -38,8 +38,8 @@ test("defines Windows panel design tokens", () => {
 
 test("uses layered native material surfaces with readable fallback", () => {
   assert.equal(tokenValue("--win-panel-solid"), "#f3f3f3");
-  assert.equal(tokenValue("--win-panel-material"), "rgba(243, 243, 243, 0.92)");
-  assert.equal(tokenValue("--win-surface"), "rgba(249, 249, 249, 0.88)");
+  assert.equal(tokenValue("--win-panel-material"), "rgba(246, 246, 246, 0.86)");
+  assert.equal(tokenValue("--win-surface"), "rgba(255, 255, 255, 0.52)");
   assert.equal(tokenValue("--win-card"), "rgba(255, 255, 255, 0.96)");
   assert.match(block(".shell"), /background:\s*var\(--win-panel-material\)/);
   assert.doesNotMatch(block(".device-row"), /background:\s*transparent/);
@@ -49,7 +49,7 @@ test("uses layered native material surfaces with readable fallback", () => {
 test("supports Windows light and dark shell appearances", () => {
   assert.match(css, /@media\s*\(prefers-color-scheme:\s*dark\)/);
   assert.match(css, /--win-panel-solid:\s*#202020/);
-  assert.match(css, /--win-panel-material:\s*rgba\(32,\s*32,\s*32,\s*0\.9\)/);
+  assert.match(css, /--win-panel-material:\s*rgba\(32,\s*32,\s*32,\s*0\.84\)/);
   assert.match(css, /--win-card:\s*rgba\(43,\s*43,\s*43,\s*0\.94\)/);
 });
 
@@ -65,8 +65,9 @@ test("prevents root-level scrollbars during panel entry motion", () => {
 
 test("uses a one pixel stroke and soft Fluent elevation", () => {
   assert.match(block(".shell"), /border:\s*1px solid var\(--win-stroke\)/);
+  assert.match(block(".shell"), /border-radius:\s*10px/);
   assert.match(block(".shell"), /box-shadow:\s*var\(--win-shadow-flyout\)/);
-  assert.match(tokenValue("--win-shadow-flyout"), /0 18px 38px/);
+  assert.match(tokenValue("--win-shadow-flyout"), /0 16px 34px/);
   assert.match(tokenValue("--win-stroke-highlight"), /rgba\(255,\s*255,\s*255/);
   assert.doesNotMatch(tokenValue("--win-shadow-flyout"), /0 0 2px/);
 });
@@ -75,6 +76,15 @@ test("uses compact WinUI-like control geometry", () => {
   assert.match(block(".settings-button"), /border-radius:\s*4px/);
   assert.match(block(".device-row"), /border-radius:\s*8px/);
   assert.doesNotMatch(block(".settings-button:active"), /transform:\s*translate/);
+});
+
+test("keeps the restored native title bar rhythm", () => {
+  assert.match(block(".topbar"), /height:\s*64px/);
+  assert.match(block(".topbar"), /padding:\s*13px 15px 10px/);
+  assert.match(block(".footer"), /height:\s*48px/);
+  assert.match(block(".footer"), /padding:\s*0 18px/);
+  assert.match(block(".settings-menu"), /bottom:\s*44px/);
+  assert.match(block(".diagnostics-panel"), /bottom:\s*56px/);
 });
 
 test("uses Segoe Fluent Icons for in-panel iconography", () => {
@@ -88,7 +98,7 @@ test("uses Segoe Fluent Icons for in-panel iconography", () => {
 });
 
 test("places status and settings affordance in the footer", () => {
-  assert.match(block(".footer"), /height:\s*36px/);
+  assert.match(block(".footer"), /height:\s*48px/);
   assert.match(block(".settings-button"), /width:\s*28px/);
   assert.match(block(".settings-button"), /border-radius:\s*4px/);
   assert.match(block(".settings-menu"), /position:\s*absolute/);
@@ -101,7 +111,7 @@ test("uses a compact topbar BLE badge", () => {
 
 test("uses a compact diagnostics flyout inside the panel", () => {
   assert.match(block(".diagnostics-panel"), /position:\s*absolute/);
-  assert.match(block(".diagnostics-panel"), /bottom:\s*42px/);
+  assert.match(block(".diagnostics-panel"), /bottom:\s*56px/);
   assert.match(block(".diagnostics-report"), /font-family:\s*Consolas/);
 });
 

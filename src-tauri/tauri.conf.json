@@ -22,8 +22,7 @@
         "decorations": false,
         "transparent": true,
         "windowEffects": {
-          "effects": ["acrylic"],
-          "color": "#F3F3F3CC"
+          "effects": ["mica"]
         },
         "alwaysOnTop": true,
         "skipTaskbar": true,

@@ -38,6 +38,5 @@ test("configures the tray panel window for Windows native material", () => {
   assert.ok(mainWindow, "main Tauri window should be declared");
   assert.equal(mainWindow.transparent, true);
   assert.equal(mainWindow.decorations, false);
-  assert.deepEqual(mainWindow.windowEffects.effects, ["acrylic"]);
-  assert.match(mainWindow.windowEffects.color, /^#[A-Fa-f0-9]{8}$/);
+  assert.deepEqual(mainWindow.windowEffects.effects, ["mica"]);
 });
