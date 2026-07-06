@@ -6,12 +6,12 @@ Blue Battery is a lightweight Windows tray app for checking Bluetooth battery le
 
 ## Status
 
-- Current version: `0.1.0`
+- Current version: `0.2.0`
 - Release type: portable Windows demo zip
 - Platform: Windows desktop
 - Repository: <https://github.com/SULAWES/blue_battery>
 
-0.1.0 的目标是验证核心体验：托盘图标显示最低电量，展开面板显示 Windows 当前可读的蓝牙电量。安装器、自动更新、复杂设置页和厂商私有协议都不在这个版本范围内。
+0.2.0 的目标是在核心托盘体验之上补齐轻量设置、刷新控制、低电量状态和诊断信息。安装器、自动更新、Windows Toast 通知和厂商私有协议仍不在这个版本范围内。
 
 ## Features
 
@@ -21,8 +21,10 @@ Blue Battery is a lightweight Windows tray app for checking Bluetooth battery le
 - 托盘 tooltip 显示设备电量摘要和低电量提醒。
 - 小面板显示设备名称、电量百分比、读取来源和连接状态。
 - 支持手动刷新、后台自动刷新、诊断信息、开机自启动和本地设置。
-- 设备电量低于或等于 20% 时，在托盘 tooltip 和面板底部显示低电量提醒。
+- 设备电量低于或等于配置阈值时，在托盘 tooltip 和面板底部显示低电量提醒，默认阈值为 20%。
 - 面板齿轮菜单可调整刷新频率、低电量阈值、启动行为，并可复制诊断信息。
+- 后台刷新会避免重复扫描，并在读取失败时短暂退避。
+- 诊断信息会区分未连接、无标准 Battery Service、不可读和读取失败等状态。
 - 使用 Microsoft Fluent UI System Icons 的电池图标资源，并在构建期预渲染为运行时 RGBA 数据。
 
 ## Scope
@@ -51,7 +53,7 @@ Blue Battery 是一个“显示 Windows 已经知道的电量”的工具。它�
 
 <https://github.com/SULAWES/blue_battery/releases>
 
-下载 `BlueBattery-demo-v0.1.0.zip` 后解压，运行其中的 `blue-battery.exe`。0.1.0 是未签名 portable zip，Windows 首次运行时可能显示 SmartScreen 提示。
+下载 `BlueBattery-demo-v0.2.0.zip` 后解压，运行其中的 `blue-battery.exe`。0.2.0 是未签名 portable zip，Windows 首次运行时可能显示 SmartScreen 提示。
 
 ## Usage
 
@@ -62,14 +64,14 @@ Blue Battery 是一个“显示 Windows 已经知道的电量”的工具。它�
 - 面板右下角齿轮：刷新、刷新频率、低电量阈值、启动设置、诊断信息、关于 Blue Battery 和退出。
 - `Esc`：关闭当前面板或面板内的浮层。
 
-后台刷新默认每 60 秒执行一次。需要立即更新时，可以从托盘菜单或面板设置菜单手动刷新。
+后台刷新默认每 60 秒执行一次，可在设置菜单中调整为 30 秒或 120 秒。需要立即更新时，可以从托盘菜单或面板设置菜单手动刷新。
 
 ## Panel Settings
 
 面板右下角齿轮使用轻量 flyout 菜单：
 
 - `刷新频率`：支持 120 秒、60 秒、30 秒三档。
-- `低电量提醒`：可关闭面板和托盘 tooltip 中的低电量状态，也可设置低电量阈值为 10%、15%、20% 或 25%。
+- `低电量提醒`：可关闭面板和托盘 tooltip 中的低电量状态，可设置低电量阈值为 10%、15%、20% 或 25%，也可切换预留的系统通知偏好。
 - `启动设置`：可启用开机自启动、启用启动时显示面板，或清理开机自启动项。
 - `诊断信息`：可查看诊断信息、复制诊断信息、复制设备摘要。
 - `关于 Blue Battery`：显示版本和能力边界。
@@ -161,7 +163,7 @@ npm run tauri -- build --debug
 - Windows 暂时读取失败。
 - 设备电量只通过厂商私有协议提供。
 
-可以打开面板右下角齿轮里的诊断信息查看最近刷新结果，也可以使用“复制诊断信息”或“复制设备摘要”提供排障信息。
+可以打开面板右下角齿轮里的诊断信息查看最近刷新结果，也可以使用“复制诊断信息”或“复制设备摘要”提供排障信息。诊断中会尽量区分“未连接”、“无标准 Battery Service”、“不可读”和“读取失败”。
 
 ### 看到历史配对设备
 
@@ -169,7 +171,7 @@ npm run tauri -- build --debug
 
 ### 托盘图标没有变化
 
-可以手动刷新一次。后台刷新默认每 60 秒执行一次。
+可以手动刷新一次。后台刷新默认每 60 秒执行一次，并会避免重复刷新请求同时扫描。
 
 ### 启动后出现黑色控制台窗口
 
@@ -179,7 +181,8 @@ npm run tauri -- build --debug
 
 - 正式安装包：签名、卸载流程和自动启动清理。
 - GitHub Actions：自动构建、测试和 release 产物上传。
-- 更清晰的设备状态说明：区分不可读、未连接、读取失败和无标准服务。
+- Windows Toast 通知：在保持克制的前提下加入可选系统通知。
+- 更完整的 UI 细节：继续贴近 Windows 原生面板质感。
 
 ## Third-Party Assets
 

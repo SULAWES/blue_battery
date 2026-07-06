@@ -48,9 +48,13 @@ test("renders Fluent tray icons at build time instead of runtime", () => {
   assert.doesNotMatch(runtimeDependencies, /^resvg\s*=/m);
 });
 
-test("documents the 0.1.0 public release scope", () => {
-  assert.match(changelog, /## 0\.1\.0/);
+test("documents the 0.2.0 public release scope", () => {
+  assert.match(changelog, /## 0\.2\.0/);
   assert.match(changelog, /portable zip/i);
+  assert.match(changelog, /configurable background refresh/i);
+  assert.match(changelog, /low battery threshold/i);
+  assert.match(changelog, /structured diagnostics/i);
   assert.match(changelog, /标准 BLE Battery Service/);
   assert.match(changelog, /不支持私有协议/);
+  assert.match(changelog, /Windows Toast/);
 });

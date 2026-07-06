@@ -16,7 +16,7 @@ const cargoToml = readFileSync(
 test("keeps package, Cargo, and Tauri versions in sync", () => {
   const cargoVersion = cargoToml.match(/^version\s*=\s*"([^"]+)"/m)?.[1];
 
-  assert.equal(packageJson.version, "0.1.0");
+  assert.equal(packageJson.version, "0.2.0");
   assert.equal(cargoVersion, packageJson.version);
   assert.equal(tauriConfig.version, packageJson.version);
 });
