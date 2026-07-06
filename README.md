@@ -151,6 +151,20 @@ npm run tauri -- build --debug
 
 `release/`、`dist/`、`target/` 等生成产物不进入 git。
 
+## GitHub Actions
+
+项目包含两个 GitHub Actions workflow：
+
+- `.github/workflows/ci.yml`：在 push 到 `master` 或打开 pull request 时运行，执行 `npm ci`、`npm run test:panel`、`cargo test --manifest-path src-tauri/Cargo.toml`、`npm run build` 和 `npm run tauri -- build --debug`。
+- `.github/workflows/release.yml`：在推送 `vX.Y.Z` tag 时运行。workflow 会检查 tag 是否匹配 `package.json` 中的版本号，运行测试，执行 `npm run demo:package`，然后把 `release/BlueBattery-demo-vX.Y.Z.zip` 发布到 GitHub Release。
+
+发布 0.2.0 的命令示例：
+
+```powershell
+git tag v0.2.0
+git push origin v0.2.0
+```
+
 ## Troubleshooting
 
 ### 不显示设备
@@ -180,7 +194,6 @@ npm run tauri -- build --debug
 ## Roadmap
 
 - 正式安装包：签名、卸载流程和自动启动清理。
-- GitHub Actions：自动构建、测试和 release 产物上传。
 - Windows Toast 通知：在保持克制的前提下加入可选系统通知。
 - 更完整的 UI 细节：继续贴近 Windows 原生面板质感。
 

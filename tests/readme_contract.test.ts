@@ -38,3 +38,11 @@ test("README documents the completed panel settings menu", () => {
   assert.match(readme, /关于 Blue Battery/);
   assert.match(readme, /退出/);
 });
+
+test("README documents GitHub Actions CI and tag-based releases", () => {
+  assert.match(readme, /\.github\/workflows\/ci\.yml/);
+  assert.match(readme, /\.github\/workflows\/release\.yml/);
+  assert.match(readme, /npm run demo:package/);
+  assert.match(readme, /git tag v0\.2\.0/);
+  assert.match(readme, /BlueBattery-demo-vX\.Y\.Z\.zip/);
+});

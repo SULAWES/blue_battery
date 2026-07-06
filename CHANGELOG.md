@@ -12,6 +12,7 @@ Configurable tray demo release for Windows.
 - Adds a stored system-notification preference for future Windows Toast support without enabling intrusive notifications by default.
 - Adds structured diagnostics for disconnected devices, unreadable devices, devices without standard Battery Service, and read failures.
 - Adds diagnostic copy actions for the full diagnostics report and a compact device summary.
+- Adds GitHub Actions workflows for Windows CI and tag-based portable zip releases.
 
 ### Changed
 
