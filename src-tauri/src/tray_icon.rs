@@ -203,6 +203,11 @@ mod tests {
     }
 
     #[test]
+    fn fluent_tray_icons_are_rendered_with_high_quality_downsampling() {
+        assert_eq!(fluent_icons::TRAY_ICON_OVERSAMPLE_SCALE, 4);
+    }
+
+    #[test]
     fn renders_transparent_tray_bitmap_with_visible_battery_shape() {
         let bitmap = render_icon_bitmap(Some(48));
 
@@ -219,15 +224,15 @@ mod tests {
             nontransparent_bounds(&bitmap).expect("visible tray icon");
 
         assert!(
-            max_x - min_x + 1 >= 32,
+            max_x - min_x + 1 >= 36,
             "battery icon should use most of the tray icon width, got x bounds {min_x}..{max_x}"
         );
         assert!(
-            max_y - min_y + 1 >= 20,
+            max_y - min_y + 1 >= 25,
             "battery icon should stay readable after tray scaling, got y bounds {min_y}..{max_y}"
         );
         assert!(
-            nontransparent_pixels(&bitmap) >= 140,
+            nontransparent_pixels(&bitmap) >= 180,
             "battery icon should have enough visible mass for the notification area"
         );
     }
@@ -250,8 +255,8 @@ mod tests {
         assert_eq!(bitmap.width, 40);
         assert_eq!(bitmap.height, 40);
         assert_eq!(pixel(&bitmap, 0, 0).3, 0, "transparent background");
-        assert!(max_x - min_x + 1 >= 32, "icon should fill tray width");
-        assert!(max_y - min_y + 1 >= 20, "icon should fill tray height");
+        assert!(max_x - min_x + 1 >= 36, "icon should fill tray width");
+        assert!(max_y - min_y + 1 >= 25, "icon should fill tray height");
         assert!(has_color(&bitmap, Color(16, 124, 16, 255)));
     }
 

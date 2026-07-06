@@ -241,6 +241,7 @@ app.innerHTML = `
 `;
 
 const summaryEl = document.querySelector<HTMLDivElement>("#summary")!;
+const shellEl = document.querySelector<HTMLElement>(".shell")!;
 const contentEl = document.querySelector<HTMLElement>("#content")!;
 const connectedBadgeEl = document.querySelector<HTMLDivElement>("#connected-badge")!;
 const footerStatusEl = document.querySelector<HTMLSpanElement>("#footer-status")!;
@@ -419,6 +420,10 @@ document.addEventListener("keydown", (event) => {
 
     void hidePanel();
   }
+});
+
+window.addEventListener("focus", () => {
+  playPanelEntryAnimation();
 });
 
 void listen<RefreshResult>("devices-refreshed", (event) => {
@@ -760,6 +765,16 @@ function formatSummaryTime(timestampMs: number | undefined) {
 
 function setDiagnosticsOpen(open: boolean) {
   diagnosticsPanel.hidden = !open;
+}
+
+function playPanelEntryAnimation() {
+  shellEl.removeAttribute("data-entering");
+  void shellEl.offsetWidth;
+  shellEl.dataset.entering = "true";
+
+  window.setTimeout(() => {
+    shellEl.removeAttribute("data-entering");
+  }, 180);
 }
 
 async function hidePanel() {

@@ -21,6 +21,10 @@
         "resizable": false,
         "decorations": false,
         "transparent": true,
+        "windowEffects": {
+          "effects": ["acrylic"],
+          "color": "#F3F3F3CC"
+        },
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "visible": false

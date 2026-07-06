@@ -29,3 +29,15 @@ test("declares the demo application icon in Tauri metadata", () => {
   const icon = statSync(new URL("../src-tauri/icons/icon.ico", import.meta.url));
   assert.ok(icon.size > 1024, "icon.ico should be a real icon asset");
 });
+
+test("configures the tray panel window for Windows native material", () => {
+  const mainWindow = tauriConfig.app.windows.find(
+    (window: { label?: string }) => window.label === "main",
+  );
+
+  assert.ok(mainWindow, "main Tauri window should be declared");
+  assert.equal(mainWindow.transparent, true);
+  assert.equal(mainWindow.decorations, false);
+  assert.deepEqual(mainWindow.windowEffects.effects, ["acrylic"]);
+  assert.match(mainWindow.windowEffects.color, /^#[A-Fa-f0-9]{8}$/);
+});

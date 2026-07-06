@@ -20,10 +20,15 @@ function tokenValue(token: string) {
 
 test("defines Windows panel design tokens", () => {
   for (const token of [
+    "--win-panel-solid",
+    "--win-panel-material",
     "--win-bg",
     "--win-surface",
     "--win-card",
-    "--win-border",
+    "--win-stroke",
+    "--win-stroke-highlight",
+    "--win-hover",
+    "--win-focus-ring",
     "--win-accent",
     "--win-shadow-flyout",
   ]) {
@@ -31,17 +36,39 @@ test("defines Windows panel design tokens", () => {
   }
 });
 
-test("uses opaque Windows panel surfaces instead of translucent glass", () => {
-  assert.equal(tokenValue("--win-bg"), "#f3f3f3");
-  assert.equal(tokenValue("--win-surface"), "#f9f9f9");
-  assert.equal(tokenValue("--win-card"), "#ffffff");
+test("uses layered native material surfaces with readable fallback", () => {
+  assert.equal(tokenValue("--win-panel-solid"), "#f3f3f3");
+  assert.equal(tokenValue("--win-panel-material"), "rgba(243, 243, 243, 0.92)");
+  assert.equal(tokenValue("--win-surface"), "rgba(249, 249, 249, 0.88)");
+  assert.equal(tokenValue("--win-card"), "rgba(255, 255, 255, 0.96)");
+  assert.match(block(".shell"), /background:\s*var\(--win-panel-material\)/);
+  assert.doesNotMatch(block(".device-row"), /background:\s*transparent/);
   assert.doesNotMatch(block(".shell"), /backdrop-filter/);
 });
 
 test("supports Windows light and dark shell appearances", () => {
   assert.match(css, /@media\s*\(prefers-color-scheme:\s*dark\)/);
-  assert.match(css, /--win-bg:\s*#202020/);
-  assert.match(css, /--win-card:\s*#2b2b2b/);
+  assert.match(css, /--win-panel-solid:\s*#202020/);
+  assert.match(css, /--win-panel-material:\s*rgba\(32,\s*32,\s*32,\s*0\.9\)/);
+  assert.match(css, /--win-card:\s*rgba\(43,\s*43,\s*43,\s*0\.94\)/);
+});
+
+test("prevents root-level scrollbars during panel entry motion", () => {
+  assert.match(block("html"), /overflow:\s*hidden/);
+  assert.match(block("body"), /overflow:\s*hidden/);
+  assert.match(block("#app"), /overflow:\s*hidden/);
+  assert.match(block(".shell"), /height:\s*100vh/);
+  assert.doesNotMatch(block(".shell"), /min-height:\s*100vh/);
+  assert.match(block(".content"), /overflow-x:\s*hidden/);
+  assert.match(block(".content"), /overflow-y:\s*auto/);
+});
+
+test("uses a one pixel stroke and soft Fluent elevation", () => {
+  assert.match(block(".shell"), /border:\s*1px solid var\(--win-stroke\)/);
+  assert.match(block(".shell"), /box-shadow:\s*var\(--win-shadow-flyout\)/);
+  assert.match(tokenValue("--win-shadow-flyout"), /0 18px 38px/);
+  assert.match(tokenValue("--win-stroke-highlight"), /rgba\(255,\s*255,\s*255/);
+  assert.doesNotMatch(tokenValue("--win-shadow-flyout"), /0 0 2px/);
 });
 
 test("uses compact WinUI-like control geometry", () => {
@@ -52,7 +79,7 @@ test("uses compact WinUI-like control geometry", () => {
 
 test("uses Segoe Fluent Icons for in-panel iconography", () => {
   assert.match(block(".fluent-icon"), /font-family:\s*"Segoe Fluent Icons"/);
-  assert.equal(tokenValue("--win-icon"), "#323130");
+  assert.equal(tokenValue("--win-icon"), "#3b3a39");
   assert.match(block(".settings-button"), /color:\s*var\(--win-icon\)/);
   assert.match(block(".settings-glyph"), /color:\s*var\(--win-icon\)/);
   assert.match(block(".settings-glyph"), /font-size:\s*16px/);
@@ -108,4 +135,23 @@ test("styles switched submenu views with back, chevron, check, and metadata affo
     css,
     /\.menu-item\[aria-checked="false"\]\s+\.menu-check\s*\{[^}]*opacity:\s*0/s,
   );
+});
+
+test("adds a restrained entry motion with reduced-motion fallback", () => {
+  assert.match(
+    css,
+    /\.shell\[data-entering="true"\]\s*\{[^}]*transform-origin:\s*bottom right[^}]*animation:\s*panel-enter/s,
+  );
+  assert.match(css, /@keyframes\s+panel-enter/);
+  assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+  assert.match(
+    css,
+    /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*\.shell\[data-entering="true"\]\s*\{[^}]*animation:\s*none/s,
+  );
+});
+
+test("keeps native control focus states visible without blue icon noise", () => {
+  assert.match(css, /:focus-visible/);
+  assert.match(block(".settings-button:focus-visible"), /outline:\s*2px solid var\(--win-focus-ring\)/);
+  assert.match(block(".menu-item:focus-visible"), /background:\s*var\(--win-hover\)/);
 });
