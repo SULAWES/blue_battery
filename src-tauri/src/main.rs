@@ -1,12 +1,13 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::sync::{
-    Mutex,
-    atomic::{AtomicBool, Ordering},
+use std::{
+    sync::Mutex,
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use bluetooth::RefreshResult;
 use diagnostics::{Diagnostics, RefreshSource};
+use refresh_policy::{RefreshDecision, RefreshGate};
 use settings::AppSettings;
 use single_instance::InstanceClaim;
 use tauri::{AppHandle, Emitter, Manager, tray::TrayIcon};
@@ -15,6 +16,7 @@ mod bluetooth;
 mod diagnostics;
 mod panel_position;
 mod panel_window;
+mod refresh_policy;
 mod settings;
 mod single_instance;
 mod startup;
@@ -28,25 +30,34 @@ struct AppState {
     latest: Mutex<Option<RefreshResult>>,
     diagnostics: Mutex<Diagnostics>,
     settings: Mutex<AppSettings>,
-    background_refresh_running: AtomicBool,
+    refresh_gate: Mutex<RefreshGate>,
 }
 
 #[tauri::command]
 async fn refresh_devices(app: AppHandle) -> Result<RefreshResult, String> {
+    match begin_refresh(&app, RefreshSource::Foreground)? {
+        RefreshStart::Run => {}
+        RefreshStart::Cached(result) => return Ok(result),
+    }
+
     let task_result = tauri::async_runtime::spawn_blocking(bluetooth::read_connected_devices).await;
 
     let result = match task_result {
         Ok(Ok(result)) => result,
         Ok(Err(error)) => {
+            finish_refresh(&app, false);
             record_refresh_failure(&app, RefreshSource::Foreground, &error);
             return Err(error);
         }
         Err(error) => {
             let message = format!("Refresh task failed: {error}");
+            finish_refresh(&app, false);
             record_refresh_failure(&app, RefreshSource::Foreground, &message);
             return Err(message);
         }
     };
+
+    finish_refresh(&app, true);
 
     if let Err(error) = apply_refresh_result(&app, &result) {
         record_refresh_failure(&app, RefreshSource::Foreground, &error);
@@ -230,10 +241,10 @@ fn start_auto_refresh(app: AppHandle) -> tauri::Result<()> {
 }
 
 fn refresh_in_background(app: AppHandle) {
-    let state = app.state::<AppState>();
-    if !try_begin_background_refresh(&state.background_refresh_running) {
-        record_diagnostic_event(&app, "background refresh skipped: already running");
-        return;
+    match begin_refresh(&app, RefreshSource::Background) {
+        Ok(RefreshStart::Run) => {}
+        Ok(RefreshStart::Cached(_)) => return,
+        Err(_) => return,
     }
 
     tauri::async_runtime::spawn(async move {
@@ -243,30 +254,70 @@ fn refresh_in_background(app: AppHandle) {
         match task_result {
             Ok(Ok(result)) => match apply_refresh_result(&app, &result) {
                 Ok(()) => {
+                    finish_refresh(&app, true);
                     record_refresh_result(&app, RefreshSource::Background, &result);
                     let _ = app.emit("devices-refreshed", result);
                 }
-                Err(error) => record_refresh_failure(&app, RefreshSource::Background, &error),
+                Err(error) => {
+                    finish_refresh(&app, true);
+                    record_refresh_failure(&app, RefreshSource::Background, &error);
+                }
             },
-            Ok(Err(error)) => record_refresh_failure(&app, RefreshSource::Background, &error),
-            Err(error) => record_refresh_failure(
-                &app,
-                RefreshSource::Background,
-                &format!("Refresh task failed: {error}"),
-            ),
+            Ok(Err(error)) => {
+                finish_refresh(&app, false);
+                record_refresh_failure(&app, RefreshSource::Background, &error);
+            }
+            Err(error) => {
+                finish_refresh(&app, false);
+                record_refresh_failure(
+                    &app,
+                    RefreshSource::Background,
+                    &format!("Refresh task failed: {error}"),
+                );
+            }
         }
-
-        let state = app.state::<AppState>();
-        finish_background_refresh(&state.background_refresh_running);
     });
 }
 
-fn try_begin_background_refresh(running: &AtomicBool) -> bool {
-    !running.swap(true, Ordering::AcqRel)
+enum RefreshStart {
+    Run,
+    Cached(RefreshResult),
 }
 
-fn finish_background_refresh(running: &AtomicBool) {
-    running.store(false, Ordering::Release);
+fn begin_refresh(app: &AppHandle, source: RefreshSource) -> Result<RefreshStart, String> {
+    let cached = latest_refresh_result(app)?;
+    let cached_refreshed_at_ms = cached.as_ref().map(|result| result.refreshed_at_ms);
+    let state = app.state::<AppState>();
+    let decision = state
+        .refresh_gate
+        .lock()
+        .map_err(|_| "refresh gate lock poisoned".to_string())?
+        .begin(unix_ms(), cached_refreshed_at_ms);
+
+    match decision {
+        RefreshDecision::Run => Ok(RefreshStart::Run),
+        RefreshDecision::UseCached { reason } => {
+            record_refresh_skipped(app, source, reason);
+            cached
+                .map(RefreshStart::Cached)
+                .ok_or_else(|| format!("Refresh skipped: {reason}"))
+        }
+        RefreshDecision::Skip { reason } => {
+            record_refresh_skipped(app, source, reason);
+            Err(format!("Refresh skipped: {reason}"))
+        }
+    }
+}
+
+fn finish_refresh(app: &AppHandle, success: bool) {
+    let state = app.state::<AppState>();
+    if let Ok(mut gate) = state.refresh_gate.lock() {
+        if success {
+            gate.finish_success(unix_ms());
+        } else {
+            gate.finish_failure(unix_ms());
+        }
+    }
 }
 
 fn load_settings_into_state(app: &AppHandle) -> Result<AppSettings, String> {
@@ -297,20 +348,22 @@ fn current_settings(app: &AppHandle) -> AppSettings {
 }
 
 fn refresh_latest_tray_state(app: &AppHandle) -> Result<(), String> {
-    let latest = {
-        let state = app.state::<AppState>();
-        state
-            .latest
-            .lock()
-            .map_err(|_| "latest state lock poisoned".to_string())?
-            .clone()
-    };
+    let latest = latest_refresh_result(app)?;
 
     if let Some(result) = latest {
         apply_refresh_result(app, &result)?;
     }
 
     Ok(())
+}
+
+fn latest_refresh_result(app: &AppHandle) -> Result<Option<RefreshResult>, String> {
+    let state = app.state::<AppState>();
+    state
+        .latest
+        .lock()
+        .map_err(|_| "latest state lock poisoned".to_string())
+        .map(|latest| latest.clone())
 }
 
 fn apply_refresh_result(app: &AppHandle, result: &RefreshResult) -> Result<(), String> {
@@ -363,6 +416,13 @@ fn record_refresh_failure(app: &AppHandle, source: RefreshSource, message: impl 
     }
 }
 
+fn record_refresh_skipped(app: &AppHandle, source: RefreshSource, reason: impl AsRef<str>) {
+    let state = app.state::<AppState>();
+    if let Ok(mut diagnostics) = state.diagnostics.lock() {
+        diagnostics.record_refresh_skipped(source, reason);
+    }
+}
+
 fn diagnostics_report(app: &AppHandle) -> Result<String, String> {
     let state = app.state::<AppState>();
     state
@@ -372,22 +432,18 @@ fn diagnostics_report(app: &AppHandle) -> Result<String, String> {
         .map_err(|_| "diagnostics state lock poisoned".to_string())
 }
 
+fn unix_ms() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis()
+        .try_into()
+        .unwrap_or(i64::MAX)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::AtomicBool;
-
-    #[test]
-    fn background_refresh_gate_prevents_overlapping_refreshes() {
-        let running = AtomicBool::new(false);
-
-        assert!(try_begin_background_refresh(&running));
-        assert!(!try_begin_background_refresh(&running));
-
-        finish_background_refresh(&running);
-        assert!(try_begin_background_refresh(&running));
-    }
-
     #[test]
     fn default_automatic_refresh_interval_stays_lightweight() {
         let interval = AppSettings::default().refresh_interval();

@@ -71,6 +71,14 @@ impl Diagnostics {
         ));
     }
 
+    pub fn record_refresh_skipped(&mut self, source: RefreshSource, reason: impl AsRef<str>) {
+        self.record_event(format!(
+            "refresh skipped: source={} reason={}",
+            source.as_str(),
+            reason.as_ref()
+        ));
+    }
+
     pub fn report(&self) -> String {
         if self.events.is_empty() {
             return "Blue Battery diagnostics\nNo diagnostic events recorded.".to_string();
@@ -140,6 +148,20 @@ mod tests {
 
         assert!(report.contains("source=background"));
         assert!(report.contains("Bluetooth task failed"));
+    }
+
+    #[test]
+    fn report_records_skipped_refreshes() {
+        let mut diagnostics = Diagnostics::default();
+
+        diagnostics
+            .record_refresh_skipped(RefreshSource::Foreground, "refresh interval not elapsed");
+
+        let report = diagnostics.report();
+
+        assert!(report.contains("refresh skipped"));
+        assert!(report.contains("source=foreground"));
+        assert!(report.contains("refresh interval not elapsed"));
     }
 
     #[test]

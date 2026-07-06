@@ -96,6 +96,11 @@ test("loads and updates persisted user settings", () => {
   assert.doesNotMatch(source, /60_000/);
 });
 
+test("does not run a second frontend auto refresh loop", () => {
+  assert.doesNotMatch(source, /setInterval/);
+  assert.doesNotMatch(source, /autoRefreshTimer/);
+});
+
 test("closes the panel with Escape when no inner flyout is open", () => {
   assert.match(source, /hide_panel/);
   assert.match(source, /invoke\s*<\s*void\s*>\("hide_panel"\)/);

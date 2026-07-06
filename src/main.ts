@@ -9,8 +9,6 @@ import {
 } from "./render.ts";
 import {
   DEFAULT_SETTINGS,
-  LOW_BATTERY_THRESHOLDS,
-  REFRESH_INTERVAL_SECONDS,
   type AppSettings,
 } from "./settings.ts";
 import "./styles.css";
@@ -34,7 +32,6 @@ let lastResult: RefreshResult | null = null;
 let refreshing = false;
 let startupEnabled = false;
 let appSettings: AppSettings = DEFAULT_SETTINGS;
-let autoRefreshTimer: number | undefined;
 let appVersion = "0.1.0";
 let settingsMenuViewStack: SettingsMenuView[] = ["main"];
 
@@ -513,21 +510,10 @@ async function resetSettings() {
 function applySettings(settings: AppSettings) {
   appSettings = settings;
   updateSettingsMenuState();
-  scheduleAutoRefresh();
 
   if (lastResult) {
     render(lastResult);
   }
-}
-
-function scheduleAutoRefresh() {
-  if (autoRefreshTimer !== undefined) {
-    window.clearInterval(autoRefreshTimer);
-  }
-
-  autoRefreshTimer = window.setInterval(() => {
-    void refreshDevices();
-  }, appSettings.refreshIntervalSeconds * 1000);
 }
 
 function updateSettingsMenuState() {
