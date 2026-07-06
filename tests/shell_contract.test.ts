@@ -74,6 +74,18 @@ test("uses checkmarks for checkbox and radio menu states", () => {
   );
 });
 
+test("exposes a quiet low battery notification toggle without forcing Windows toasts", () => {
+  const notificationButton =
+    source.match(
+      /<button id="menu-low-battery-system-notification"[\s\S]*?<\/button>/,
+    )?.[0] ?? "";
+
+  assert.match(source, /id="menu-low-battery-system-notification"/);
+  assert.match(source, /lowBatterySystemNotificationEnabled/);
+  assert.doesNotMatch(notificationButton, /disabled/);
+  assert.match(source, /已更新低电量通知/);
+});
+
 test("exposes startup preference, diagnostics copy, about, reset, and exit actions", () => {
   assert.match(source, /id="menu-show-panel-on-startup"/);
   assert.match(source, /showPanelOnStartup/);

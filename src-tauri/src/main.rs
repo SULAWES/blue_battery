@@ -7,6 +7,7 @@ use std::{
 
 use bluetooth::RefreshResult;
 use diagnostics::{Diagnostics, RefreshSource};
+use low_battery::LowBatteryAlertState;
 use refresh_policy::{RefreshDecision, RefreshGate};
 use settings::AppSettings;
 use single_instance::InstanceClaim;
@@ -14,6 +15,7 @@ use tauri::{AppHandle, Emitter, Manager, tray::TrayIcon};
 
 mod bluetooth;
 mod diagnostics;
+mod low_battery;
 mod panel_position;
 mod panel_window;
 mod refresh_policy;
@@ -31,6 +33,7 @@ struct AppState {
     diagnostics: Mutex<Diagnostics>,
     settings: Mutex<AppSettings>,
     refresh_gate: Mutex<RefreshGate>,
+    low_battery_alerts: Mutex<LowBatteryAlertState>,
 }
 
 #[tauri::command]
@@ -64,6 +67,7 @@ async fn refresh_devices(app: AppHandle) -> Result<RefreshResult, String> {
         return Err(error);
     }
 
+    evaluate_low_battery_alerts(&app, &result);
     record_refresh_result(&app, RefreshSource::Foreground, &result);
     Ok(result)
 }
@@ -94,14 +98,16 @@ fn update_settings(app: AppHandle, settings: AppSettings) -> Result<AppSettings,
     record_diagnostic_event(
         &app,
         format!(
-            "settings updated: refresh_interval_seconds={} low_battery_status_enabled={} low_battery_threshold={} show_panel_on_startup={}",
+            "settings updated: refresh_interval_seconds={} low_battery_status_enabled={} low_battery_threshold={} low_battery_system_notification_enabled={} show_panel_on_startup={}",
             settings.refresh_interval_seconds,
             settings.low_battery_status_enabled,
             settings.low_battery_threshold,
+            settings.low_battery_system_notification_enabled,
             settings.show_panel_on_startup
         ),
     );
     refresh_latest_tray_state(&app)?;
+    evaluate_latest_low_battery_alerts(&app)?;
     Ok(settings)
 }
 
@@ -115,6 +121,7 @@ fn reset_settings(app: AppHandle) -> Result<AppSettings, String> {
     store_settings(&app, settings.clone())?;
     record_diagnostic_event(&app, "settings reset");
     refresh_latest_tray_state(&app)?;
+    evaluate_latest_low_battery_alerts(&app)?;
     Ok(settings)
 }
 
@@ -255,6 +262,7 @@ fn refresh_in_background(app: AppHandle) {
             Ok(Ok(result)) => match apply_refresh_result(&app, &result) {
                 Ok(()) => {
                     finish_refresh(&app, true);
+                    evaluate_low_battery_alerts(&app, &result);
                     record_refresh_result(&app, RefreshSource::Background, &result);
                     let _ = app.emit("devices-refreshed", result);
                 }
@@ -357,6 +365,14 @@ fn refresh_latest_tray_state(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+fn evaluate_latest_low_battery_alerts(app: &AppHandle) -> Result<(), String> {
+    if let Some(result) = latest_refresh_result(app)? {
+        evaluate_low_battery_alerts(app, &result);
+    }
+
+    Ok(())
+}
+
 fn latest_refresh_result(app: &AppHandle) -> Result<Option<RefreshResult>, String> {
     let state = app.state::<AppState>();
     state
@@ -364,6 +380,29 @@ fn latest_refresh_result(app: &AppHandle) -> Result<Option<RefreshResult>, Strin
         .lock()
         .map_err(|_| "latest state lock poisoned".to_string())
         .map(|latest| latest.clone())
+}
+
+fn evaluate_low_battery_alerts(app: &AppHandle, result: &RefreshResult) {
+    let settings = current_settings(app);
+    let alerts = {
+        let state = app.state::<AppState>();
+        state
+            .low_battery_alerts
+            .lock()
+            .map(|mut alerts| alerts.evaluate(result, &settings))
+            .unwrap_or_default()
+    };
+
+    for alert in alerts {
+        record_diagnostic_event(
+            app,
+            format!(
+                "low battery notification queued: {} {}% threshold={}%",
+                alert.display_name, alert.battery_percent, alert.threshold
+            ),
+        );
+        let _ = app.emit("low-battery-alert", alert);
+    }
 }
 
 fn apply_refresh_result(app: &AppHandle, result: &RefreshResult) -> Result<(), String> {

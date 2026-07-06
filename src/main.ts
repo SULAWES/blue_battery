@@ -142,10 +142,9 @@ app.innerHTML = `
               <span class="fluent-icon menu-check" aria-hidden="true">&#xE73E;</span>
               <span class="menu-text">显示低电量状态</span>
             </button>
-            <button id="menu-low-battery-system-notification" class="menu-item" type="button" role="menuitemcheckbox" aria-checked="false" disabled>
+            <button id="menu-low-battery-system-notification" class="menu-item" type="button" role="menuitemcheckbox" aria-checked="false">
               <span class="fluent-icon menu-check" aria-hidden="true">&#xE73E;</span>
-              <span class="menu-text">系统通知</span>
-              <span class="menu-value">后续</span>
+              <span class="menu-text">低电量通知</span>
             </button>
             <button id="menu-open-low-battery-threshold" class="menu-item" type="button" role="menuitem" data-open-menu-view="threshold">
               <span class="fluent-icon menu-threshold-glyph" aria-hidden="true">&#xE9D9;</span>
@@ -344,6 +343,16 @@ lowBatteryStatusMenuItem.addEventListener("click", () => {
   );
 });
 
+lowBatterySystemNotificationMenuItem.addEventListener("click", () => {
+  void updateSettings(
+    {
+      lowBatterySystemNotificationEnabled:
+        !appSettings.lowBatterySystemNotificationEnabled,
+    },
+    "已更新低电量通知",
+  );
+});
+
 lowBatteryThresholdMenuItems.forEach((item) => {
   item.addEventListener("click", () => {
     void updateSettings(
@@ -426,6 +435,13 @@ window.addEventListener("focus", () => {
 void listen<RefreshResult>("devices-refreshed", (event) => {
   lastResult = event.payload;
   render(event.payload);
+});
+
+void listen<{
+  display_name: string;
+  battery_percent: number;
+}>("low-battery-alert", (event) => {
+  footerStatusEl.textContent = `${event.payload.display_name} 电量较低：${event.payload.battery_percent}%`;
 });
 
 void initialize();
@@ -561,6 +577,7 @@ function setSettingsControlsDisabled(disabled: boolean) {
     item.disabled = disabled;
   }
   lowBatteryStatusMenuItem.disabled = disabled;
+  lowBatterySystemNotificationMenuItem.disabled = disabled;
   showPanelOnStartupMenuItem.disabled = disabled;
   resetSettingsMenuItem.disabled = disabled;
 }
