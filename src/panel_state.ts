@@ -7,11 +7,23 @@ export type DeviceBatteryInfo = {
   updated_at_ms: number;
 };
 
+export type DeviceReadIssue = {
+  device_id: string;
+  display_name: string;
+  status:
+    | "not_connected"
+    | "no_standard_battery_service"
+    | "unreadable"
+    | "read_failed";
+  message: string;
+};
+
 export type RefreshResult = {
   devices: DeviceBatteryInfo[];
   connected_le_device_count: number;
   refreshed_at_ms: number;
   errors: string[];
+  issues: DeviceReadIssue[];
 };
 
 type MessagePanelState = {
@@ -60,12 +72,39 @@ export function describePanelState(
     };
   }
 
+  const readIssue = result.issues.find(
+    (issue) => issue.status === "unreadable" || issue.status === "read_failed",
+  );
+  if (readIssue) {
+    return {
+      kind: "error",
+      summary: readIssue.status === "read_failed" ? "读取失败，稍后重试" : "设备电量不可读",
+      title: readIssue.status === "read_failed" ? "读取失败" : "设备电量不可读",
+      detail:
+        readIssue.status === "read_failed"
+          ? `${readIssue.display_name} 已连接，但读取标准电量失败。`
+          : `${readIssue.display_name} 已连接，但 Windows 暂时无法读取标准电量。`,
+    };
+  }
+
   if (result.connected_le_device_count === 0) {
     return {
       kind: "empty",
       summary: "没有已连接 BLE 设备",
       title: "暂无可显示电量",
       detail: "连接支持标准 GATT Battery Service 的 BLE 设备后会自动刷新。",
+    };
+  }
+
+  const noBatteryIssue = result.issues.find(
+    (issue) => issue.status === "no_standard_battery_service",
+  );
+  if (noBatteryIssue) {
+    return {
+      kind: "empty",
+      summary: "已连接设备未暴露标准电量",
+      title: "暂无可显示电量",
+      detail: `${noBatteryIssue.display_name} 没有暴露标准 Battery Service。`,
     };
   }
 

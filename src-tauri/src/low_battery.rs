@@ -79,6 +79,7 @@ mod tests {
             connected_le_device_count: 1,
             refreshed_at_ms: 123,
             errors: Vec::new(),
+            issues: Vec::new(),
         }
     }
 

@@ -14,6 +14,7 @@ function result(partial: Partial<RefreshResult>): RefreshResult {
     connected_le_device_count: 0,
     refreshed_at_ms: Date.UTC(2026, 5, 5, 1, 2, 3),
     errors: [],
+    issues: [],
     ...partial,
   };
 }

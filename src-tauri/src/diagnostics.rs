@@ -60,6 +60,18 @@ impl Diagnostics {
             event.push_str(&result.errors.join(" | "));
         }
 
+        if !result.issues.is_empty() {
+            event.push_str(" issues=");
+            event.push_str(
+                &result
+                    .issues
+                    .iter()
+                    .map(|issue| issue.summary())
+                    .collect::<Vec<_>>()
+                    .join(" | "),
+            );
+        }
+
         self.record_event(event);
     }
 
@@ -102,7 +114,7 @@ impl Diagnostics {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bluetooth::{DeviceBatteryInfo, RefreshResult};
+    use crate::bluetooth::{DeviceBatteryInfo, DeviceReadIssue, DeviceReadStatus, RefreshResult};
 
     fn result(errors: Vec<String>) -> RefreshResult {
         RefreshResult {
@@ -117,6 +129,7 @@ mod tests {
             connected_le_device_count: 2,
             refreshed_at_ms: 456,
             errors,
+            issues: Vec::new(),
         }
     }
 
@@ -136,6 +149,24 @@ mod tests {
         assert!(report.contains("displayable_devices=1"));
         assert!(report.contains("connected_ble=2"));
         assert!(report.contains("Keyboard: HRESULT 0x80070490"));
+    }
+
+    #[test]
+    fn report_records_structured_device_issues() {
+        let mut diagnostics = Diagnostics::default();
+        let mut result = result(Vec::new());
+        result.issues = vec![DeviceReadIssue {
+            device_id: "mouse".to_string(),
+            display_name: "OPPO Enco Free4".to_string(),
+            status: DeviceReadStatus::NoStandardBatteryService,
+            message: "No standard Battery Service was exposed.".to_string(),
+        }];
+
+        diagnostics.record_refresh_result(RefreshSource::Background, &result);
+
+        let report = diagnostics.report();
+
+        assert!(report.contains("issues=OPPO Enco Free4: 无标准 Battery Service"));
     }
 
     #[test]

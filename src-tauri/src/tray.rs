@@ -96,6 +96,7 @@ mod tests {
             connected_le_device_count,
             refreshed_at_ms: 123,
             errors,
+            issues: Vec::new(),
         }
     }
 
@@ -184,6 +185,7 @@ mod tests {
             connected_le_device_count: 1,
             refreshed_at_ms: 123,
             errors: vec!["Keyboard: HRESULT 0x80070490".to_string()],
+            issues: Vec::new(),
         };
 
         assert_eq!(

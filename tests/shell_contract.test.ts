@@ -99,6 +99,12 @@ test("exposes startup preference, diagnostics copy, about, reset, and exit actio
   assert.match(source, /exit_app/);
 });
 
+test("copies structured device issue diagnostics in the device summary", () => {
+  assert.match(source, /Device issues:/);
+  assert.match(source, /result\.issues/);
+  assert.match(source, /formatDeviceIssue/);
+});
+
 test("loads and updates persisted user settings", () => {
   assert.match(source, /get_settings/);
   assert.match(source, /update_settings/);

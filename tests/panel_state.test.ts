@@ -12,6 +12,7 @@ function result(partial: Partial<RefreshResult>): RefreshResult {
     connected_le_device_count: 0,
     refreshed_at_ms: 123,
     errors: [],
+    issues: [],
     ...partial,
   };
 }
@@ -48,12 +49,28 @@ test("reports device state with lowest battery in the summary", () => {
 });
 
 test("reports empty state when connected devices expose no standard battery", () => {
-  assert.deepEqual(describePanelState(result({ connected_le_device_count: 2 }), false), {
-    kind: "empty",
-    summary: "已连接设备未暴露标准电量",
-    title: "暂无可显示电量",
-    detail: "当前连接设备没有返回标准 Battery Level characteristic。",
-  });
+  assert.deepEqual(
+    describePanelState(
+      result({
+        connected_le_device_count: 2,
+        issues: [
+          {
+            device_id: "earbuds",
+            display_name: "OPPO Enco Free4",
+            status: "no_standard_battery_service",
+            message: "No standard Battery Service was exposed.",
+          },
+        ],
+      }),
+      false,
+    ),
+    {
+      kind: "empty",
+      summary: "已连接设备未暴露标准电量",
+      title: "暂无可显示电量",
+      detail: "OPPO Enco Free4 没有暴露标准 Battery Service。",
+    },
+  );
 });
 
 test("reports error state when no displayable devices are available and reads failed", () => {
@@ -70,6 +87,31 @@ test("reports error state when no displayable devices are available and reads fa
       summary: "读取失败，稍后重试",
       title: "读取失败",
       detail: "Windows 蓝牙接口暂时没有返回可用电量，稍后会继续刷新。",
+    },
+  );
+});
+
+test("reports unreadable connected devices separately from missing battery service", () => {
+  assert.deepEqual(
+    describePanelState(
+      result({
+        connected_le_device_count: 1,
+        issues: [
+          {
+            device_id: "keyboard",
+            display_name: "Keychron Z6 Ultra 8K",
+            status: "unreadable",
+            message: "Windows found a standard battery path but did not return a readable value.",
+          },
+        ],
+      }),
+      false,
+    ),
+    {
+      kind: "error",
+      summary: "设备电量不可读",
+      title: "设备电量不可读",
+      detail: "Keychron Z6 Ultra 8K 已连接，但 Windows 暂时无法读取标准电量。",
     },
   );
 });

@@ -1,6 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { describePanelState, type RefreshResult } from "./panel_state.ts";
+import {
+  describePanelState,
+  type DeviceReadIssue,
+  type RefreshResult,
+} from "./panel_state.ts";
 import {
   buildCommandErrorView,
   buildPanelView,
@@ -754,8 +758,28 @@ function buildDeviceSummary(result: RefreshResult | null) {
     }
   }
 
+  lines.push("Device issues:");
+  if (!result || result.issues.length === 0) {
+    lines.push("- none");
+  } else {
+    for (const issue of result.issues) {
+      lines.push(`- ${formatDeviceIssue(issue)}`);
+    }
+  }
+
   lines.push(`Errors: ${result && result.errors.length > 0 ? result.errors.join(" | ") : "none"}`);
   return lines.join("\n");
+}
+
+function formatDeviceIssue(issue: DeviceReadIssue) {
+  const labels: Record<DeviceReadIssue["status"], string> = {
+    not_connected: "未连接",
+    no_standard_battery_service: "无标准 Battery Service",
+    unreadable: "不可读",
+    read_failed: "读取失败",
+  };
+
+  return `${issue.display_name}: ${labels[issue.status]} (${issue.message})`;
 }
 
 function formatSummaryTime(timestampMs: number | undefined) {
